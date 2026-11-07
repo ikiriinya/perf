@@ -1,0 +1,3357 @@
+// ==============================================================================
+// PRISMA ORM SCHEMA - ENTERPRISE MULTI-TENANT GOVERNANCE & PERFORMANCE PLATFORM
+// Target Database: PostgreSQL (Supabase / AWS RDS / GCP Cloud SQL)
+// Version: Production-Grade 1.8.0 - Flexible Organization Structure & Tenant-Configured Hierarchies
+//
+// MODULE BREAKDOWN:
+// 1. Tenancy, Group Holdings & Subsidiaries (Strict Isolation & Group Visibility Grants)
+// 2. Global Identity, Role Definitions & Position Assignments (Tenant RBAC & Positions)
+// 3. Flexible Org Structure: Tenant-Configured Unit Types, Rules & Closure Table
+// 4. Unit Groups, Multi-Unit Programs, Committees & Taskforces
+// 5. Multi-Source Strategic Plans, Group Strategy Cascades & Alignment
+// 6. Recruitment, Talent Requisitions & Job Description Duty Frameworks
+// 7. Month-by-Month Department/Unit Workplans & Cascaded UnitKpiTargets
+// 8. Versioned Performance Contracts, Addendums, Numeric Items & Period-Keyed Appraisals
+// 9. Moderation Calibration Sessions, Adjustments & Closed-Loop Appeals
+// 10. Reusable Template Packs, Onboarding Clone Engine & Time-Boxed Support Grants
+// 11. Interactive Analytics, Business Intelligence (BI) Engine & Rollup Aggregates
+// ==============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ==============================================================================
+// 1. TENANCY, CORPORATE BRANDING, VISION, MISSION & MANDATES
+// ==============================================================================
+
+enum OrganizationType {
+  PUBLIC_SECTOR_MINISTRY
+  STATE_CORPORATION_AGENCY
+  CONSTITUTIONAL_COMMISSION
+  NON_PROFIT_INGO
+  COUNTY_LOCAL_GOVERNMENT
+  ENTERPRISE_HOLDING
+}
+
+enum OrganizationStatus {
+  ONBOARDING
+  ACTIVE
+  SUSPENDED
+  ARCHIVED
+}
+
+model Organization {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug                  String             @unique @db.VarChar(64)
+  name                  String             @db.VarChar(255)
+  legalName             String?            @db.VarChar(255)
+  code                  String             @unique @db.VarChar(32)
+  orgType               OrganizationType   @default(PUBLIC_SECTOR_MINISTRY)
+  status                OrganizationStatus @default(ACTIVE)
+
+  // Corporate Identity & Institutional Purpose
+  tagline               String?            @db.VarChar(255) // e.g. "Service with Integrity, Impact with Evidence"
+  vision                String?            @db.Text        // Long-term desired future state
+  mission               String?            @db.Text        // Operational statement of purpose
+  coreValues            Json?              // Array: [{code: "INT", name: "Integrity", definition: "...", behavior: "..."}]
+  legalEstablishment    String?            @db.Text        // E.g. "Established pursuant to State Corporations Act Cap 446"
+  citizenCharterSummary String?            @db.Text        // Citizen service delivery commitment summary
+  citizenCharterUrl     String?            @db.Text
+
+  // Corporate Branding & Visual Assets
+  logoUrl               String?            @db.Text        // Primary institutional logo / crest (light bg)
+  logoDarkUrl           String?            @db.Text        // Inverted logo for dark mode / headers
+  faviconUrl            String?            @db.Text
+  primaryColor          String             @default("#0F172A") @db.VarChar(16) // Main brand tone (Hex)
+  secondaryColor        String             @default("#1E3A8A") @db.VarChar(16) // Complementary institutional color
+  accentColor           String             @default("#D97706") @db.VarChar(16) // Action & highlight color
+  brandThemeConfig      Json?              // Typography scale, border radii, white-label configs
+  customDomain          String?            @unique @db.VarChar(128) // e.g. "governance.waterauthority.gov"
+
+  // Contact & Localization
+  websiteUrl            String?            @db.VarChar(255)
+  primaryEmail          String             @db.VarChar(128)
+  timezone              String             @default("UTC") @db.VarChar(64)
+  currency              String             @default("USD") @db.VarChar(8)
+  fiscalYearStart       Int                @default(7) // Month index (e.g. 7 for July 1st fiscal year)
+  gradingScale          Json?              // Legacy fallback json configs
+  settings              Json?              // Security, SLA timeouts, 2FA enforcement
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  // Tenant-isolated child collections (Phases 1-8 exhaustive coverage)
+  mandates              OrganizationMandate[]
+  fiscalYears           FiscalYear[]
+  unitTypes             UnitType[]
+  unitTypeRules         UnitTypeRule[]
+  orgUnits              OrgUnit[]
+  orgUnitClosures       OrgUnitClosure[]
+  orgUnitVersions       OrgUnitVersion[]
+  orgRestructureProposals OrgRestructureProposal[]
+  unitGroupTypes        UnitGroupType[]
+  unitGroups            UnitGroup[]
+  unitGroupMembers      UnitGroupMember[]
+  positions             Position[]
+  positionAssignments   PositionAssignment[]
+  roleDefinitions       RoleDefinition[]
+  roleAssignments       RoleAssignment[]
+  matrixGroups          MatrixGroup[]
+  memberships           OrganizationMembership[]
+  userAssignments       UserAssignment[]
+  userDelegations       UserDelegation[]
+  planSources           PlanSource[]
+  strategicPillars      StrategicPillar[]
+  strategicObjectives   StrategicObjective[]
+  objectiveContributingUnits ObjectiveContributingUnit[]
+  kpis                  KeyPerformanceIndicator[]
+  kpiPeriodicTargets    KpiPeriodicTarget[]
+  unitKpiTargets        UnitKpiTarget[]
+  workplans             Workplan[]
+  workplanActivities    WorkplanActivity[]
+  workplanMonthlySchedules WorkplanMonthlySchedule[]
+  performanceAgreements PerformanceAgreement[]
+  performanceAgreementVersions PerformanceAgreementVersion[]
+  performanceAgreementItems PerformanceAgreementItem[]
+  performanceAgreementAddendums PerformanceAgreementAddendum[]
+  performanceAppraisals PerformanceAppraisal[]
+  performanceAppraisalItems PerformanceAppraisalItem[]
+  scoringRules          ScoringRule[]
+  gradingScales         GradingScale[]
+  gradingBands          GradingBand[]
+  jobDescriptionDuties  JobDescriptionDuty[]
+  competencies          Competency[]
+  competencyRatings     CompetencyRating[]
+  recruitmentRequisitions RecruitmentRequisition[]
+  candidateApplicants   CandidateApplicant[]
+  calibrationSessions   CalibrationSession[]
+  calibrationAdjustments CalibrationAdjustment[]
+  appraisalAppeals      PerformanceAppraisalAppeal[]
+  evidenceCategories    EvidenceCategory[]
+  approvalRequestKinds  ApprovalRequestKind[]
+  approvalWorkflows     ApprovalWorkflow[]
+  approvalStageConfigs  ApprovalStageConfig[]
+  workflowStageConditions WorkflowStageCondition[]
+  approvalRequests      ApprovalRequest[]
+  approvalActions       ApprovalAction[]
+  auditTrails           AuditTrail[]
+  storyBankEntries      StoryBankEntry[]
+  evidenceAttachments   EvidenceAttachment[]
+  strategicPlanMatrixRows StrategicPlanMatrixRow[]
+
+  // Analytics & Business Intelligence Engine Collections
+  dashboards                  DashboardDefinition[]
+  dashboardWidgets            DashboardWidget[]
+  savedViews                  AnalyticsSavedView[]
+  departmentExecutionRollups  DepartmentExecutionRollup[]
+  subsidiaryScorecardRollups  SubsidiaryScorecardRollup[]
+  appraisalDistributionRollups AppraisalDistributionRollup[]
+
+  // Phase 6 Group & Template Collections
+  ownedGroups           OrganizationGroup[]          @relation("GroupOwner")
+  groupMemberships      OrganizationGroupMember[]    @relation("GroupMemberOrganizations")
+  grantedVisibilityGrants VisibilityGrant[]          @relation("GrantedVisibilityGrants")
+  subsidiaryAlignments  SubsidiaryObjectiveAlignment[]
+  periodMappings        GroupPeriodMapping[]
+  onboardingRecord      OrganizationOnboarding?      @relation("OrganizationOnboarding")
+  clonedSubsidiaries    OrganizationOnboarding[]     @relation("ClonedFromParentOnboarding")
+  supportGrants         SupportAccessGrant[]
+
+  @@index([status])
+  @@index([orgType])
+  @@index([status, deletedAt])
+  @@map("organizations")
+}
+
+// Statutory, Constitutional & Legal Mandates of the Company / Institution
+enum MandateCategory {
+  CONSTITUTIONAL_CORE        // Sovereign / constitutional mandate
+  STATUTORY_ACT              // Primary statutory enabling legislation
+  EXECUTIVE_ORDER            // Gazette notice / presidential / ministerial directive
+  REGULATORY_OVERSIGHT       // Industry licensing & regulatory enforcement
+  SERVICE_DELIVERY_CHARTER   // Citizen service delivery covenant
+}
+
+model OrganizationMandate {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String             @db.Uuid
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  category             MandateCategory    @default(STATUTORY_ACT)
+  title                String             @db.VarChar(255)
+  legalReference       String             @db.VarChar(255)
+  summaryDescription   String             @db.Text
+  fullTextOrClauses    String?            @db.Text
+  gazetteNoticeNumber  String?            @db.VarChar(100)
+  effectiveDate        DateTime           @db.Date
+  expiryDate           DateTime?          @db.Date
+  isActive             Boolean            @default(true)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt            DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime           @updatedAt @db.Timestamptz(6)
+
+  strategicObjectives  StrategicObjective[]
+
+  @@unique([organizationId, legalReference])
+  @@index([organizationId, category])
+  @@index([organizationId, deletedAt])
+  @@map("organization_mandates")
+}
+
+// ==============================================================================
+// 1B. GROUP STRUCTURE, SUBSIDIARIES & VISIBILITY GRANTS (PHASE 6)
+// ==============================================================================
+
+enum GroupRelationshipType {
+  PARENT
+  SUBSIDIARY
+  AFFILIATE
+}
+
+model OrganizationGroup {
+  id                  String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code                String                    @unique @db.VarChar(32)
+  name                String                    @db.VarChar(255)
+  ownerOrganizationId String                    @db.Uuid
+  ownerOrganization   Organization              @relation("GroupOwner", fields: [ownerOrganizationId], references: [id], onDelete: Restrict)
+  reportingCurrency   String                    @default("USD") @db.VarChar(8)
+  description         String?                   @db.Text
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt           DateTime                  @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime                  @updatedAt @db.Timestamptz(6)
+
+  members             OrganizationGroupMember[]
+  groupMemberships    GroupMembership[]
+  visibilityGrants    VisibilityGrant[]
+  groupObjectives     GroupObjective[]
+  periodMappings      GroupPeriodMapping[]
+  subsidiaryScorecardRollups SubsidiaryScorecardRollup[]
+
+  @@index([ownerOrganizationId])
+  @@index([deletedAt])
+  @@map("organization_groups")
+}
+
+model OrganizationGroupMember {
+  id                    String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId               String                @db.Uuid
+  group                 OrganizationGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  organizationId        String                @db.Uuid
+  organization          Organization          @relation("GroupMemberOrganizations", fields: [organizationId], references: [id], onDelete: Restrict)
+
+  relationshipType      GroupRelationshipType @default(SUBSIDIARY)
+  ownershipStakePercent Decimal?              @default(100.00) @db.Decimal(5, 2)
+  isConsolidated        Boolean               @default(true)
+  effectiveFrom         DateTime              @default(now()) @db.Date
+  effectiveTo           DateTime?             @db.Date
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt             DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime              @updatedAt @db.Timestamptz(6)
+
+  @@unique([groupId, organizationId])
+  @@index([organizationId])
+  @@index([groupId])
+  @@index([organizationId, deletedAt])
+  @@map("organization_group_members")
+}
+
+enum GroupRole {
+  GROUP_ADMIN
+  GROUP_VIEWER
+}
+
+model GroupMembership {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identityId  String            @db.Uuid
+  identity    Identity          @relation(fields: [identityId], references: [id], onDelete: Restrict)
+
+  groupId     String            @db.Uuid
+  group       OrganizationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  role        GroupRole         @default(GROUP_VIEWER)
+  status      UserStatus        @default(ACTIVE)
+
+  grantedAt   DateTime          @default(now()) @db.Timestamptz(6)
+  revokedAt   DateTime?         @db.Timestamptz(6)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt   DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @db.Timestamptz(6)
+
+  @@unique([identityId, groupId])
+  @@index([identityId])
+  @@index([groupId])
+  @@index([groupId, deletedAt])
+  @@map("group_memberships")
+}
+
+enum GrantResourceType {
+  SCORECARD
+  STRATEGIC_PLAN
+  KPI_ACTUALS
+  WORKPLAN_SUMMARY
+  APPRAISAL_AGGREGATE
+}
+
+enum GrantAccessLevel {
+  NONE
+  SUMMARY
+  DETAIL
+}
+
+model VisibilityGrant {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  grantingOrganizationId String                 @db.Uuid
+  grantingOrganization   Organization           @relation("GrantedVisibilityGrants", fields: [grantingOrganizationId], references: [id], onDelete: Restrict)
+
+  groupId                String                 @db.Uuid
+  group                  OrganizationGroup      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  resourceType           GrantResourceType
+  accessLevel            GrantAccessLevel       @default(SUMMARY)
+
+  effectiveFrom          DateTime               @default(now()) @db.Timestamptz(6)
+  effectiveTo            DateTime?              @db.Timestamptz(6)
+
+  grantedByMembershipId  String                 @db.Uuid
+  grantedByMembership    OrganizationMembership @relation(fields: [grantedByMembershipId], references: [id], onDelete: Restrict)
+
+  reason                 String?                @db.Text
+  isRevoked              Boolean                @default(false)
+  revokedAt              DateTime?              @db.Timestamptz(6)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt              DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime               @updatedAt @db.Timestamptz(6)
+
+  @@unique([grantingOrganizationId, groupId, resourceType])
+  @@index([grantingOrganizationId])
+  @@index([groupId])
+  @@index([deletedAt])
+  @@map("visibility_grants")
+}
+
+// Multi-Currency Exchange Rates for Group Roll-Ups
+model CurrencyRate {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fromCurrency  String   @db.VarChar(8)
+  toCurrency    String   @db.VarChar(8)
+  rate          Decimal  @db.Decimal(16, 6)
+  effectiveDate DateTime @db.Date
+  source        String    @default("CENTRAL_BANK") @db.VarChar(64)
+  deletedAt     DateTime? @db.Timestamptz(6)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@unique([fromCurrency, toCurrency, effectiveDate])
+  @@index([fromCurrency, toCurrency, effectiveDate])
+  @@index([deletedAt])
+  @@map("currency_rates")
+}
+
+// Fiscal Year / Calendar Quarter Alignment Mapping
+model GroupPeriodMapping {
+  id              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId         String            @db.Uuid
+  group           OrganizationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  organizationId  String            @db.Uuid
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  fiscalYearId    String            @db.Uuid
+  fiscalYear      FiscalYear        @relation(fields: [fiscalYearId], references: [id], onDelete: Restrict)
+
+  localPeriodKey  String            @db.VarChar(32) // "Q1", "Q2", "Q3", "Q4", "ANNUAL"
+  calendarQuarter String            @db.VarChar(16) // "2025-Q3", "2025-Q4", "2026-Q1"
+  startDate       DateTime          @db.Date
+  endDate         DateTime          @db.Date
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt       DateTime          @default(now()) @db.Timestamptz(6)
+
+  @@unique([organizationId, localPeriodKey, calendarQuarter])
+  @@index([groupId, calendarQuarter])
+  @@index([organizationId, deletedAt])
+  @@map("group_period_mappings")
+}
+
+// Group-Level Strategy & Cascade Objectives
+model GroupObjective {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupId           String                @db.Uuid
+  group             OrganizationGroup     @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  code              String                @db.VarChar(32)
+  title             String                @db.VarChar(255)
+  description       String?               @db.Text
+  kpiName           String                @db.VarChar(255)
+  kpiUnit           String                @db.VarChar(32)
+  targetValue       Decimal               @db.Decimal(14, 4)
+  calculationMethod KpiCalculationMethod  @default(SUM_CUMULATIVE)
+  targetCurrency    String?               @default("USD") @db.VarChar(8)
+  reportingYear     String                @db.VarChar(32)
+  status            String                @default("ACTIVE") @db.VarChar(32)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt         DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt         DateTime              @updatedAt @db.Timestamptz(6)
+
+  alignments        SubsidiaryObjectiveAlignment[]
+
+  @@unique([groupId, code])
+  @@index([groupId, deletedAt])
+  @@map("group_objectives")
+}
+
+model SubsidiaryObjectiveAlignment {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  groupObjectiveId     String                 @db.Uuid
+  groupObjective       GroupObjective         @relation(fields: [groupObjectiveId], references: [id], onDelete: Cascade)
+
+  strategicObjectiveId String                 @db.Uuid
+  strategicObjective   StrategicObjective     @relation(fields: [strategicObjectiveId], references: [id], onDelete: Restrict)
+
+  kpiId                String?                @db.Uuid
+  kpi                  KeyPerformanceIndicator? @relation(fields: [kpiId], references: [id], onDelete: SetNull)
+
+  organizationId       String                 @db.Uuid
+  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  contributionWeight   Decimal                @default(100.00) @db.Decimal(5, 2)
+  status               String                 @default("ACTIVE") @db.VarChar(32)
+  alignedAt            DateTime               @default(now()) @db.Timestamptz(6)
+
+  alignedByMembershipId String                @db.Uuid
+  alignedByMembership  OrganizationMembership @relation(fields: [alignedByMembershipId], references: [id], onDelete: Restrict)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt            DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime               @updatedAt @db.Timestamptz(6)
+
+  @@unique([groupObjectiveId, strategicObjectiveId])
+  @@index([organizationId])
+  @@index([organizationId, deletedAt])
+  @@map("subsidiary_objective_alignments")
+}
+
+// Multi-Year Institutional Accounting Cycles & Statutory Audit Calendars
+enum FiscalYearStatus {
+  PLANNING
+  ACTIVE
+  CLOSED_AUDIT_PENDING
+  ARCHIVED_FINAL
+}
+
+model FiscalYear {
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String            @db.Uuid
+  organization         Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  code                 String            @db.VarChar(32) // e.g. "FY-2025/2026"
+  name                 String            @db.VarChar(100) // e.g. "Fiscal Year 2025-2026"
+  startDate            DateTime          @db.Date
+  endDate              DateTime          @db.Date
+  status               FiscalYearStatus  @default(PLANNING)
+  isCurrent            Boolean           @default(false)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt            DateTime          @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @db.Timestamptz(6)
+
+  planSources          PlanSource[]
+  workplans            Workplan[]
+  performanceAgreements PerformanceAgreement[]
+  kpiPeriodicTargets   KpiPeriodicTarget[]
+  unitKpiTargets       UnitKpiTarget[]
+  calibrationSessions  CalibrationSession[]
+  storyBankEntries     StoryBankEntry[]
+  periodMappings       GroupPeriodMapping[]
+  departmentExecutionRollups DepartmentExecutionRollup[]
+  subsidiaryScorecardRollups SubsidiaryScorecardRollup[]
+  appraisalDistributionRollups AppraisalDistributionRollup[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isCurrent])
+  @@index([organizationId, deletedAt])
+  @@map("fiscal_years")
+}
+
+// ==============================================================================
+// 3. FLEXIBLE ORG STRUCTURE: TENANT-CONFIGURED UNIT TYPES, RULES & CLOSURES
+// ==============================================================================
+
+enum OrgUnitStatus {
+  ACTIVE
+  RESTRUCTURING
+  DECOMMISSIONED
+}
+
+// Configurable organizational tiers per tenant (e.g. Ministry, Directorate, Department, Section)
+model UnitType {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code                  String             @db.VarChar(32) // e.g. "MINISTRY", "DIRECTORATE", "DEPARTMENT", "SECTION"
+  name                  String             @db.VarChar(128) // e.g. "State Department", "Directorate", "Department"
+  pluralName            String             @db.VarChar(128) // e.g. "State Departments", "Directorates", "Departments"
+  icon                  String?            @db.VarChar(64) // e.g. "Building2", "Layers", "FolderTree", "Briefcase"
+  sortRank              Int                @default(1) // Visual hierarchy tier (1 = top-most)
+
+  // Behavioral capability flags
+  canHoldWorkplan       Boolean            @default(true)
+  canHoldHeadcount      Boolean            @default(true)
+  canSignAgreements     Boolean            @default(true)
+  isHorizontal          Boolean            @default(false)
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  orgUnits              OrgUnit[]
+  orgUnitVersions       OrgUnitVersion[]
+  childRules            UnitTypeRule[]     @relation("ParentUnitTypeRules")
+  parentRules           UnitTypeRule[]     @relation("ChildUnitTypeRules")
+  approvalStageConfigs  ApprovalStageConfig[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, sortRank])
+  @@index([organizationId, deletedAt])
+  @@map("unit_types")
+}
+
+// Permitted structural parent-to-child containment rules
+model UnitTypeRule {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  parentUnitTypeId      String             @db.Uuid
+  parentUnitType        UnitType           @relation("ParentUnitTypeRules", fields: [parentUnitTypeId], references: [id], onDelete: Cascade)
+
+  childUnitTypeId       String             @db.Uuid
+  childUnitType         UnitType           @relation("ChildUnitTypeRules", fields: [childUnitTypeId], references: [id], onDelete: Cascade)
+
+  maxChildren           Int?               // Optional limit on direct children of this type under parent
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  @@unique([organizationId, parentUnitTypeId, childUnitTypeId])
+  @@index([organizationId, parentUnitTypeId])
+  @@index([organizationId, childUnitTypeId])
+  @@index([organizationId, deletedAt])
+  @@map("unit_type_rules")
+}
+
+// Dynamic Org Chart Node linked to configurable UnitType
+model OrgUnit {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code                  String             @db.VarChar(32)
+  name                  String             @db.VarChar(255)
+  shortName             String?            @db.VarChar(64)
+  description           String?            @db.Text
+  status                OrgUnitStatus      @default(ACTIVE)
+
+  // Tenant-configured structural classification
+  unitTypeId            String             @db.Uuid
+  unitType              UnitType           @relation(fields: [unitTypeId], references: [id], onDelete: Restrict)
+
+  // Self-relation tree for direct parent-child navigation
+  parentId              String?            @db.Uuid
+  parent                OrgUnit?           @relation("OrgUnitHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children              OrgUnit[]          @relation("OrgUnitHierarchy")
+
+  // Temporal Validity
+  effectiveFrom         DateTime           @default(now()) @db.Date
+  effectiveTo           DateTime?          @db.Date
+
+  // Unit Head / Lead User (Denormalized current pointer to OrganizationMembership)
+  headMembershipId      String?            @db.Uuid
+  headMembership        OrganizationMembership? @relation("OrgUnitLeadership", fields: [headMembershipId], references: [id], onDelete: SetNull)
+
+  // Horizontal Cross-Cutting Linkage (legacy matrix groups)
+  matrixGroupId         String?            @db.Uuid
+  matrixGroup           MatrixGroup?       @relation(fields: [matrixGroupId], references: [id], onDelete: SetNull)
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  // Closure Table Relations (Subtree queries & depth lookups)
+  closuresAsAncestor    OrgUnitClosure[]   @relation("AncestorClosures")
+  closuresAsDescendant  OrgUnitClosure[]   @relation("DescendantClosures")
+
+  // Positions & Roles in Unit
+  positions             Position[]
+  scopedRoleAssignments RoleAssignment[]   @relation("TargetUnitRoleAssignments")
+  unitGroupMemberships  UnitGroupMember[]
+
+  // Operational & Governance Relations
+  homeMembers           OrganizationMembership[] @relation("MembershipHomeUnit")
+  historicalAssignments UserAssignment[]
+  versions              OrgUnitVersion[]
+  delegations           UserDelegation[]
+  ledStrategicObjectives StrategicObjective[]     @relation("LeadUnitObjectives")
+  contributedObjectives  ObjectiveContributingUnit[]
+  workplans              Workplan[]
+  storyBankEntries       StoryBankEntry[]
+  performanceAgreements  PerformanceAgreement[]
+  unitKpiTargets         UnitKpiTarget[]
+  calibrationSessions    CalibrationSession[]
+  restructureApprovalRequests ApprovalRequest[]   @relation("OrgUnitRestructureApprovals")
+  recruitmentRequisitions RecruitmentRequisition[]
+  departmentExecutionRollups DepartmentExecutionRollup[]
+  appraisalDistributionRollups AppraisalDistributionRollup[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, unitTypeId])
+  @@index([organizationId, parentId])
+  @@index([organizationId, deletedAt])
+  @@map("org_units")
+}
+
+// Maintained via database triggers: Fast O(1) subtree retrieval and ancestor tree rollups
+model OrgUnitClosure {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  ancestorId            String             @db.Uuid
+  ancestor              OrgUnit            @relation("AncestorClosures", fields: [ancestorId], references: [id], onDelete: Cascade)
+
+  descendantId          String             @db.Uuid
+  descendant            OrgUnit            @relation("DescendantClosures", fields: [descendantId], references: [id], onDelete: Cascade)
+
+  depth                 Int                @default(0) // 0 = self, 1 = direct child, 2 = grandchild...
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+
+  @@unique([organizationId, ancestorId, descendantId])
+  @@index([organizationId, ancestorId, depth])
+  @@index([organizationId, descendantId, depth])
+  @@index([organizationId, deletedAt])
+  @@map("org_unit_closures")
+}
+
+// Historical point-in-time snapshot of an OrgUnit as it existed during past fiscal cycles
+model OrgUnitVersion {
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String                 @db.Uuid
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  orgUnitId             String                 @db.Uuid
+  orgUnit               OrgUnit                @relation(fields: [orgUnitId], references: [id], onDelete: Cascade)
+
+  versionNo             Int                    @default(1)
+  name                  String                 @db.VarChar(255)
+  shortName             String?                @db.VarChar(64)
+  unitTypeId            String?                @db.Uuid
+  unitType              UnitType?              @relation(fields: [unitTypeId], references: [id], onDelete: SetNull)
+  parentOrgUnitId       String?                @db.Uuid
+  headMembershipId      String?                @db.Uuid
+
+  effectiveFrom         DateTime               @db.Date
+  effectiveTo           DateTime?              @db.Date
+  isCurrent             Boolean                @default(true)
+
+  restructureProposalId String?                @db.Uuid
+  restructureProposal   OrgRestructureProposal? @relation(fields: [restructureProposalId], references: [id], onDelete: SetNull)
+  changeSummary         String?                @db.Text
+
+  deletedAt             DateTime?              @db.Timestamptz(6)
+  createdAt             DateTime               @default(now()) @db.Timestamptz(6)
+
+  @@unique([orgUnitId, versionNo])
+  @@index([organizationId, orgUnitId, isCurrent])
+  @@index([organizationId, deletedAt])
+  @@map("org_unit_versions")
+}
+
+enum RestructureProposalStatus {
+  PROPOSED
+  IN_REVIEW
+  APPROVED
+  IMPLEMENTED
+  REJECTED
+  CANCELLED
+}
+
+// Formal restructuring proposal enabling historical workplans to retain integrity
+model OrgRestructureProposal {
+  id                    String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String                    @db.Uuid
+  organization          Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  proposalCode          String                    @db.VarChar(64) // e.g. "RESTRUCT-2026-001"
+  title                 String                    @db.VarChar(255)
+  justification         String                    @db.Text
+  proposedEffectiveDate DateTime                  @db.Date
+  status                RestructureProposalStatus @default(PROPOSED)
+
+  submittedByMembershipId String                  @db.Uuid
+  submittedByMembership   OrganizationMembership  @relation("RestructureProposer", fields: [submittedByMembershipId], references: [id], onDelete: Restrict)
+
+  approvedAt            DateTime?                 @db.Timestamptz(6)
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt             DateTime                  @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime                  @updatedAt @db.Timestamptz(6)
+
+  orgUnitVersions       OrgUnitVersion[]
+  approvalRequests      ApprovalRequest[]
+
+  @@unique([organizationId, proposalCode])
+  @@index([organizationId, deletedAt])
+  @@map("org_restructure_proposals")
+}
+
+// Horizontal Cross-Cutting Groups / Committees (Matrix Governance)
+model MatrixGroup {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String       @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code           String       @db.VarChar(32)
+  name           String       @db.VarChar(255) // e.g. "ESG Oversight Committee", "Digital Transformation Taskforce"
+  purpose        String?      @db.Text
+  coordinatorMembershipId String? @db.Uuid
+  coordinator    OrganizationMembership? @relation("MatrixGroupCoordinator", fields: [coordinatorMembershipId], references: [id], onDelete: SetNull)
+  isActive       Boolean      @default(true)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt      DateTime     @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime     @updatedAt @db.Timestamptz(6)
+
+  orgUnits       OrgUnit[]
+  members        OrganizationMembership[] @relation("MatrixGroupMembers")
+
+  @@unique([organizationId, code])
+  @@index([organizationId, deletedAt])
+  @@map("matrix_groups")
+}
+
+// ==============================================================================
+// 4. UNIT GROUPS, MULTI-UNIT PROGRAMS, COMMITTEES & TASKFORCES
+// ==============================================================================
+
+enum UnitGroupMemberRole {
+  LEAD
+  SUPPORTING
+}
+
+// Configurable classification for horizontal initiatives (e.g. Committee, Program, Taskforce, Council)
+model UnitGroupType {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code                  String             @db.VarChar(32) // e.g. "PROGRAM", "COMMITTEE", "TASKFORCE"
+  name                  String             @db.VarChar(128)
+  description           String?            @db.Text
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  groups                UnitGroup[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, deletedAt])
+  @@map("unit_group_types")
+}
+
+// Cross-cutting group, program, committee or taskforce spanning multiple units
+model UnitGroup {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  typeId                String             @db.Uuid
+  type                  UnitGroupType      @relation(fields: [typeId], references: [id], onDelete: Restrict)
+
+  code                  String             @db.VarChar(32) // e.g. "PRG-DIGITAL-TRANSFORM", "CMTE-AUDIT-RISK"
+  name                  String             @db.VarChar(255)
+  charter               String?            @db.Text
+  effectiveFrom         DateTime           @default(now()) @db.Date
+  effectiveTo           DateTime?          @db.Date
+  isActive              Boolean            @default(true)
+
+  coordinatorMembershipId String?          @db.Uuid
+  coordinator           OrganizationMembership? @relation("UnitGroupCoordinator", fields: [coordinatorMembershipId], references: [id], onDelete: SetNull)
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  members               UnitGroupMember[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, typeId])
+  @@index([organizationId, deletedAt])
+  @@map("unit_groups")
+}
+
+// Member of a UnitGroup: can be an OrgUnit or an individual OrganizationMembership
+// Supports multiple LEAD units (e.g. joint programs) plus SUPPORTING units
+model UnitGroupMember {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  groupId               String             @db.Uuid
+  group                 UnitGroup          @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  // Polymorphic association: unit-level membership or individual membership
+  unitId                String?            @db.Uuid
+  unit                  OrgUnit?           @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  membershipId          String?            @db.Uuid
+  membership            OrganizationMembership? @relation("UnitGroupMemberships", fields: [membershipId], references: [id], onDelete: Cascade)
+
+  role                  UnitGroupMemberRole @default(SUPPORTING) // LEAD or SUPPORTING
+  title                 String?            @db.VarChar(128) // Specific function in group (e.g. "Joint Lead", "Technical Secretariat")
+
+  effectiveFrom         DateTime           @default(now()) @db.Date
+  effectiveTo           DateTime?          @db.Date
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  @@index([organizationId, groupId, role])
+  @@index([organizationId, unitId])
+  @@index([organizationId, membershipId])
+  @@index([organizationId, deletedAt])
+  @@map("unit_group_members")
+}
+
+// ==============================================================================
+// 5. POSITIONS, POSITION ASSIGNMENTS & REPORTING LINES
+// ==============================================================================
+
+// Defined post/establishment seat within an OrgUnit (e.g. Director of Finance, Senior Auditor)
+model Position {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  unitId                String             @db.Uuid
+  unit                  OrgUnit            @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  code                  String             @db.VarChar(64) // e.g. "POS-FIN-DIR-001"
+  title                 String             @db.VarChar(150) // e.g. "Director of Corporate Finance"
+  isUnitHead            Boolean            @default(false)
+  jobGradeCode          String?            @db.VarChar(32)
+  fte                   Decimal            @default(1.00) @db.Decimal(4, 2)
+
+  // Position reporting line (reports to higher position)
+  reportsToPositionId   String?            @db.Uuid
+  reportsToPosition     Position?          @relation("PositionHierarchy", fields: [reportsToPositionId], references: [id], onDelete: Restrict)
+  subordinatePositions  Position[]         @relation("PositionHierarchy")
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  assignments           PositionAssignment[]
+  roleAssignments       RoleAssignment[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, unitId])
+  @@index([organizationId, reportsToPositionId])
+  @@index([organizationId, deletedAt])
+  @@map("positions")
+}
+
+// Assignment of an OrganizationMembership to a Position with acting/substantive flags
+model PositionAssignment {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  positionId            String             @db.Uuid
+  position              Position           @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  membershipId          String             @db.Uuid
+  membership            OrganizationMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  effectiveFrom         DateTime           @default(now()) @db.Date
+  effectiveTo           DateTime?          @db.Date // NULL = active/current assignment
+  isActing              Boolean            @default(false)
+  isPrimary             Boolean            @default(true)
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  approvalActions       ApprovalAction[]
+
+  @@index([organizationId, positionId])
+  @@index([organizationId, membershipId, effectiveTo])
+  @@index([organizationId, deletedAt])
+  @@map("position_assignments")
+}
+
+// ==============================================================================
+// 6. TENANT-CONFIGURED ROLE DEFINITIONS & SCOPED ROLE ASSIGNMENTS
+// ==============================================================================
+
+enum RoleAssignmentScope {
+  SELF
+  THIS_UNIT
+  UNIT_AND_BELOW
+  ORGANIZATION
+}
+
+// Tenant-configured role definition with granular permission keys (replaces static SystemRole enum)
+model RoleDefinition {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code                  String             @db.VarChar(64) // e.g. "ORG_ADMIN", "DEPT_HEAD", "STRATEGIC_PLANNER"
+  name                  String             @db.VarChar(128)
+  description           String?            @db.Text
+  isSystem              Boolean            @default(false) // Core out-of-the-box role vs customized
+  permissionKeys        String[]           // Array of granular permissions e.g. ["workplan:approve", "agreement:sign"]
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  roleAssignments       RoleAssignment[]
+  approvalStageConfigs  ApprovalStageConfig[]  @relation("StageApproverRole")
+  fallbackStageConfigs  ApprovalStageConfig[]  @relation("FallbackRoleStages")
+  escalationStageConfigs ApprovalStageConfig[] @relation("EscalationRoleStages")
+  userAssignments       UserAssignment[]
+  userDelegations       UserDelegation[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, deletedAt])
+  @@map("role_definitions")
+}
+
+// Scoped role assignment granted to either a Position or directly to an OrganizationMembership
+model RoleAssignment {
+  id                    String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String             @db.Uuid
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  roleDefinitionId      String             @db.Uuid
+  roleDefinition        RoleDefinition     @relation(fields: [roleDefinitionId], references: [id], onDelete: Cascade)
+
+  // Assigned to position OR directly to membership
+  positionId            String?            @db.Uuid
+  position              Position?          @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  membershipId          String?            @db.Uuid
+  membership            OrganizationMembership? @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  // Scope determines boundary of authority
+  scope                 RoleAssignmentScope @default(THIS_UNIT)
+
+  // Optional target unit for scoped assignments
+  targetUnitId          String?            @db.Uuid
+  targetUnit            OrgUnit?           @relation("TargetUnitRoleAssignments", fields: [targetUnitId], references: [id], onDelete: SetNull)
+
+  effectiveFrom         DateTime           @default(now()) @db.Date
+  effectiveTo           DateTime?          @db.Date
+
+  deletedAt             DateTime?          @db.Timestamptz(6)
+  createdAt             DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime           @updatedAt @db.Timestamptz(6)
+
+  @@index([organizationId, roleDefinitionId])
+  @@index([organizationId, positionId])
+  @@index([organizationId, membershipId])
+  @@index([organizationId, targetUnitId])
+  @@index([organizationId, deletedAt])
+  @@map("role_assignments")
+}
+
+enum UserStatus {
+  ACTIVE
+  ON_PROBATION
+  ON_LEAVE
+  SECONDED
+  SUSPENDED
+  OFFBOARDED
+}
+
+// Global Single Source of Identity (Federated across all organizations/subsidiaries)
+model Identity {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  supabaseAuthId  String?       @unique @db.Uuid
+  primaryEmail    String        @unique @db.VarChar(255)
+  firstName       String        @db.VarChar(100)
+  lastName        String        @db.VarChar(100)
+  phoneNumber     String?       @db.VarChar(32)
+  avatarUrl       String?       @db.Text
+  isPlatformAdmin Boolean       @default(false)
+
+  deletedAt       DateTime?     @db.Timestamptz(6)
+  createdAt       DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime      @updatedAt @db.Timestamptz(6)
+
+  memberships     OrganizationMembership[]
+  groupMemberships GroupMembership[]
+  supportGrants   SupportAccessGrant[]
+
+  @@index([primaryEmail])
+  @@index([primaryEmail, deletedAt])
+  @@map("identities")
+}
+
+// Tenant-Scoped Employment / Mandate Membership (Strict single active home unit enforced)
+model OrganizationMembership {
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identityId           String        @db.Uuid
+  identity             Identity      @relation(fields: [identityId], references: [id], onDelete: Restrict)
+
+  organizationId       String        @db.Uuid
+  organization         Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  employeeNumber       String        @db.VarChar(64)
+  jobTitle             String        @db.VarChar(150)
+
+  // Single active home unit strictly maintained per membership
+  homeUnitId           String        @db.Uuid
+  homeUnit             OrgUnit       @relation("MembershipHomeUnit", fields: [homeUnitId], references: [id], onDelete: Restrict)
+
+  roleCode             String?       @default("EMPLOYEE") @db.VarChar(64)
+  status               UserStatus    @default(ACTIVE)
+
+  directSupervisorMembershipId String? @db.Uuid
+  directSupervisor     OrganizationMembership? @relation("MembershipSupervision", fields: [directSupervisorMembershipId], references: [id], onDelete: SetNull)
+  subordinates         OrganizationMembership[] @relation("MembershipSupervision")
+
+  jobRoleCode          String?       @db.VarChar(64)
+  jobDescription       String?       @db.Text
+
+  deletedAt            DateTime?     @db.Timestamptz(6)
+  createdAt            DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime      @updatedAt @db.Timestamptz(6)
+
+  // Flexible Org Structure: Positions, Role Assignments & Unit Groups
+  positionAssignments PositionAssignment[]
+  roleAssignments     RoleAssignment[]
+  unitGroupMemberships UnitGroupMember[]     @relation("UnitGroupMemberships")
+  coordinatedUnitGroups UnitGroup[]          @relation("UnitGroupCoordinator")
+
+  // Talent, Recruitment & Job Frameworks
+  assignedDuties            JobDescriptionDuty[]  @relation("MembershipAssignedDuties")
+  managedRequisitions       RecruitmentRequisition[] @relation("RequisitionHiringManager")
+  deployedFromApplicants    CandidateApplicant[]  @relation("ApplicantDeployedMembership")
+
+  // Analytics & Custom Dashboards
+  createdDashboards         DashboardDefinition[] @relation("DashboardAuthor")
+  savedViews                AnalyticsSavedView[]  @relation("SavedViewAuthor")
+
+  // Effective-Dated Assignment Ledger
+  assignments          UserAssignment[]      @relation("MembershipAssignments")
+  supervisedAssignments UserAssignment[]     @relation("SupervisorAssignments")
+
+  // Leadership & Assignments
+  ledOrgUnits               OrgUnit[]             @relation("OrgUnitLeadership")
+  coordinatedMatrixGroups   MatrixGroup[]         @relation("MatrixGroupCoordinator")
+  memberMatrixGroups        MatrixGroup[]         @relation("MatrixGroupMembers")
+  activeDelegationsAsActing UserDelegation[]      @relation("DelegatedActingMembership")
+  activeDelegationsAsOwner  UserDelegation[]      @relation("DelegatingSubstantiveMembership")
+
+  // Core Operational Relations
+  leadActivities            WorkplanActivity[]    @relation("ActivityLeadMembership")
+  performerAgreements       PerformanceAgreement[] @relation("PerformerAgreement")
+  supervisedAgreements      PerformanceAgreement[] @relation("SupervisorAgreement")
+  countersigningAgreements   PerformanceAgreement[] @relation("CountersigningAgreement")
+
+  performerAppraisals       PerformanceAppraisal[] @relation("PerformerAppraisal")
+  supervisedAppraisals      PerformanceAppraisal[] @relation("SupervisorAppraisal")
+  countersignedAppraisals   PerformanceAppraisal[] @relation("CountersigningAppraisal")
+
+  // Governance, Calibration, Appeals & Approvals
+  chairedCalibrationSessions CalibrationSession[]  @relation("CalibrationChair")
+  approvedCalibrationAdjustments CalibrationAdjustment[] @relation("CalibrationApprover")
+  appellantAppeals          PerformanceAppraisalAppeal[] @relation("AppraisalAppellant")
+  determinedAppeals         PerformanceAppraisalAppeal[] @relation("AppealDeterminer")
+  submittedApprovals        ApprovalRequest[]     @relation("ApprovalRequester")
+  approvalActions           ApprovalAction[]
+  substantiveApprovalActions ApprovalAction[]    @relation("DelegatedApprovalSubstantive")
+  assignedApprovalStages    ApprovalStageConfig[] @relation("DesignatedStageApprover")
+  submittedRestructureProposals OrgRestructureProposal[] @relation("RestructureProposer")
+  approvedAgreementAddendums PerformanceAgreementAddendum[] @relation("AddendumApprover")
+
+  // Evidence & Story Bank
+  verifiedStoryEntries      StoryBankEntry[]      @relation("StoryAuditor")
+  uploadedAttachments       EvidenceAttachment[]  @relation("AttachmentUploader")
+  verifiedEvidence          EvidenceAttachment[]  @relation("EvidenceVerifier")
+  auditActions              AuditTrail[]
+
+  // Group & Platform Admin Relations
+  grantedVisibilityGrants   VisibilityGrant[]
+  appliedOnboardings        OrganizationOnboarding[]
+  alignedObjectives         SubsidiaryObjectiveAlignment[]
+  approvedSupportGrants     SupportAccessGrant[]
+
+  @@unique([identityId, organizationId])
+  @@unique([organizationId, employeeNumber])
+  @@index([organizationId, homeUnitId])
+  @@index([organizationId, roleCode])
+  @@index([organizationId, status])
+  @@index([organizationId, deletedAt])
+  @@map("organization_memberships")
+}
+
+// Effective-Dated Employment & Deployment Ledger
+model UserAssignment {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String                 @db.Uuid
+  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  membershipId         String                 @db.Uuid
+  membership           OrganizationMembership @relation("MembershipAssignments", fields: [membershipId], references: [id], onDelete: Cascade)
+
+  orgUnitId            String                 @db.Uuid
+  orgUnit              OrgUnit                @relation(fields: [orgUnitId], references: [id], onDelete: Restrict)
+
+  jobTitle             String                 @db.VarChar(150)
+  roleCode             String?                @default("EMPLOYEE") @db.VarChar(64)
+  roleDefinitionId     String?                @db.Uuid
+  roleDefinition       RoleDefinition?        @relation(fields: [roleDefinitionId], references: [id], onDelete: SetNull)
+
+  directSupervisorMembershipId String?        @db.Uuid
+  directSupervisor     OrganizationMembership? @relation("SupervisorAssignments", fields: [directSupervisorMembershipId], references: [id], onDelete: SetNull)
+
+  effectiveFrom        DateTime               @db.Date
+  effectiveTo          DateTime?              @db.Date // NULL denotes currently open/active assignment
+  isCurrent            Boolean                @default(true)
+  assignmentReason     String?                @db.Text // e.g. "Initial appointment", "Promotion", "Lateral Transfer"
+
+  deletedAt            DateTime?              @db.Timestamptz(6)
+  createdAt            DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime               @updatedAt @db.Timestamptz(6)
+
+  @@index([organizationId, membershipId, isCurrent])
+  @@index([organizationId, orgUnitId])
+  @@index([organizationId, roleDefinitionId])
+  @@index([organizationId, deletedAt])
+  @@map("user_assignments")
+}
+
+// Temporary Acting / Delegated Authorities with strict audit validity windows
+model UserDelegation {
+  id                       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId           String                 @db.Uuid
+  organization             Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  substantiveMembershipId  String                 @db.Uuid
+  substantiveMembership    OrganizationMembership @relation("DelegatingSubstantiveMembership", fields: [substantiveMembershipId], references: [id], onDelete: Cascade)
+
+  actingMembershipId       String                 @db.Uuid
+  actingMembership         OrganizationMembership @relation("DelegatedActingMembership", fields: [actingMembershipId], references: [id], onDelete: Cascade)
+
+  targetOrgUnitId          String                 @db.Uuid
+  targetOrgUnit            OrgUnit                @relation(fields: [targetOrgUnitId], references: [id], onDelete: Cascade)
+
+  actingRoleCode           String?                @db.VarChar(64)
+  actingRoleDefinitionId   String?                @db.Uuid
+  actingRoleDefinition     RoleDefinition?        @relation(fields: [actingRoleDefinitionId], references: [id], onDelete: SetNull)
+
+  reason                   String                 @db.Text // e.g. "Annual leave cover", "Interim Acting appointment"
+  startDate                DateTime               @db.Date
+  endDate                  DateTime               @db.Date
+  isActive                 Boolean                @default(true)
+
+  deletedAt                DateTime?              @db.Timestamptz(6)
+  createdAt                DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime               @updatedAt @db.Timestamptz(6)
+
+  approvalActions          ApprovalAction[]
+
+  @@index([organizationId, actingMembershipId, isActive])
+  @@index([organizationId, actingRoleDefinitionId])
+  @@index([organizationId, deletedAt])
+  @@map("user_delegations")
+}
+
+// ==============================================================================
+// 3. MULTI-SOURCE STRATEGIC PLANS, PILLARS, MANDATE-ANCHORED OBJECTIVES & KPIS
+// ==============================================================================
+
+enum PlanSourceType {
+  NATIONAL_DEVELOPMENT_AGENDA // National Medium Term Plan / Presidential Manifesto
+  FIVE_YEAR_STRATEGIC_PLAN    // Corporate 5-Year Institutional Blueprint
+  CABINET_MINISTERIAL_DECREE  // High-priority ministerial decree / directive
+  DONOR_GRANT_FRAMEWORK       // Bilateral / Multilateral donor grant agreement
+  BOARD_ANNUAL_MANDATE        // Board of Directors governance mandate
+  REGULATORY_COMPLIANCE       // Statutory oversight obligation
+  SUSTAINABILITY_ESG          // ESG & Climate action framework
+}
+
+model PlanSource {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String          @db.Uuid
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  fiscalYearId   String?         @db.Uuid
+  fiscalYear     FiscalYear?     @relation(fields: [fiscalYearId], references: [id], onDelete: SetNull)
+
+  code           String          @db.VarChar(32)
+  title          String          @db.VarChar(255)
+  sourceType     PlanSourceType  @default(FIVE_YEAR_STRATEGIC_PLAN)
+  issuingBody    String          @db.VarChar(255)
+  documentRefNo  String?         @db.VarChar(100)
+  documentUrl    String?         @db.Text
+  validityStart  DateTime        @db.Date
+  validityEnd    DateTime        @db.Date
+  isActive       Boolean         @default(true)
+  metadata       Json?
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(6)
+
+  pillars        StrategicPillar[]
+  objectives     StrategicObjective[]
+  performanceAgreementItems PerformanceAgreementItem[]
+  matrixRows     StrategicPlanMatrixRow[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, sourceType])
+  @@index([organizationId, deletedAt])
+  @@map("plan_sources")
+}
+
+// Strategic Themes & Core Focus Areas (Phase 1 Fix: Scoped unique constraint)
+model StrategicPillar {
+  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String          @db.Uuid
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  planSourceId   String          @db.Uuid
+  planSource     PlanSource      @relation(fields: [planSourceId], references: [id], onDelete: Cascade)
+
+  pillarCode     String          @db.VarChar(32)
+  name           String          @db.VarChar(255)
+  goalStatement  String          @db.Text
+  sortOrder      Int             @default(1)
+  isActive       Boolean         @default(true)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt      DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @db.Timestamptz(6)
+
+  objectives     StrategicObjective[]
+
+  @@unique([planSourceId, pillarCode])
+  @@index([organizationId, planSourceId])
+  @@index([organizationId, deletedAt])
+  @@map("strategic_pillars")
+}
+
+// High-Level Strategic Objectives Anchored to Mandates and Pillars
+model StrategicObjective {
+  id                    String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String                    @db.Uuid
+  organization          Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  pillarId              String                    @db.Uuid
+  pillar                StrategicPillar           @relation(fields: [pillarId], references: [id], onDelete: Cascade)
+
+  planSourceId          String                    @db.Uuid
+  planSource            PlanSource                @relation(fields: [planSourceId], references: [id], onDelete: Cascade)
+
+  mandateId             String?                   @db.Uuid
+  mandate               OrganizationMandate?      @relation(fields: [mandateId], references: [id], onDelete: SetNull)
+
+  objectiveCode         String                    @db.VarChar(32)
+  statement             String                    @db.Text
+  baselineStatement     String?                   @db.Text
+  targetStatement       String?                   @db.Text
+  weight                Decimal                   @default(0.00) @db.Decimal(5, 2)
+  isActive              Boolean                   @default(true)
+
+  leadOrgUnitId         String                    @db.Uuid
+  leadOrgUnit           OrgUnit                   @relation("LeadUnitObjectives", fields: [leadOrgUnitId], references: [id], onDelete: Restrict)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt             DateTime                  @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime                  @updatedAt @db.Timestamptz(6)
+
+  contributingUnits     ObjectiveContributingUnit[]
+  kpis                  KeyPerformanceIndicator[]
+  workplanActivities    WorkplanActivity[]
+  performanceAgreementItems PerformanceAgreementItem[]
+  storyBankEntries      StoryBankEntry[]
+  matrixRows            StrategicPlanMatrixRow[]
+  subsidiaryAlignments  SubsidiaryObjectiveAlignment[]
+
+  @@unique([pillarId, objectiveCode])
+  @@index([organizationId, pillarId])
+  @@index([organizationId, leadOrgUnitId])
+  @@index([organizationId, mandateId])
+  @@index([organizationId, deletedAt])
+  @@map("strategic_objectives")
+}
+
+// Joint Accountability Link for Horizontal Delivery Across OrgUnits
+model ObjectiveContributingUnit {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String             @db.Uuid
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  strategicObjectiveId String             @db.Uuid
+  strategicObjective   StrategicObjective @relation(fields: [strategicObjectiveId], references: [id], onDelete: Cascade)
+
+  orgUnitId            String             @db.Uuid
+  orgUnit              OrgUnit            @relation(fields: [orgUnitId], references: [id], onDelete: Restrict)
+
+  roleDescription      String             @db.Text // e.g. "Lead Infrastructure Partner" or "Data Provider"
+  contributionWeight   Decimal            @default(0.00) @db.Decimal(5, 2)
+  isLeadCoordinator    Boolean            @default(false)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt            DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime           @updatedAt @db.Timestamptz(6)
+
+  @@unique([strategicObjectiveId, orgUnitId])
+  @@index([organizationId, strategicObjectiveId])
+  @@index([organizationId, orgUnitId])
+  @@index([organizationId, deletedAt])
+  @@map("objective_contributing_units")
+}
+
+enum KpiDirectionOfGood {
+  INCREASING_BETTER // Standard e.g. Revenue, Treated Water Volume, Tree Cover
+  DECREASING_BETTER // Defect Rate, Maternal Mortality, Water Loss Non-Revenue %
+  MAINTAIN_RANGE    // pH Level, System Pressure, Budget Variance Tolerance
+}
+
+enum KpiCalculationMethod {
+  SUM_CUMULATIVE    // Sum over periods e.g. Total Boreholes Drilled
+  AVERAGE_MEAN      // Mean average over quarters e.g. Customer Satisfaction %
+  POINT_IN_TIME     // End-of-cycle snapshot e.g. Headcount, Forest Coverage
+  WEIGHTED_INDEX    // Composite performance index
+}
+
+enum IndicatorLevel {
+  NATIONAL_TIER_1     // Tracked by Presidency/Cabinet/National Planning Body
+  CORPORATE_TIER_2    // Tracked by Board of Directors & Chief Executive Officer
+  DIVISIONAL_TIER_3   // Tracked by Executive Directors / General Managers
+  DEPARTMENTAL_TIER_4 // Tracked by Heads of Department / Unit Sectional Heads
+}
+
+model KeyPerformanceIndicator {
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String               @db.Uuid
+  organization          Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  strategicObjectiveId  String               @db.Uuid
+  strategicObjective    StrategicObjective   @relation(fields: [strategicObjectiveId], references: [id], onDelete: Cascade)
+
+  kpiCode               String               @db.VarChar(32)
+  kpiTitle              String               @db.VarChar(255)
+  description           String?              @db.Text
+  indicatorLevel        IndicatorLevel       @default(CORPORATE_TIER_2)
+  unitOfMeasure         String               @db.VarChar(64) // e.g. "Cubic Meters/Day", "Percentage %", "Kilometers"
+  directionOfGood       KpiDirectionOfGood   @default(INCREASING_BETTER)
+  calculationMethod     KpiCalculationMethod @default(SUM_CUMULATIVE)
+
+  // Explicit Baseline Anchor (Mandatory Single Source of Truth)
+  baselineValue         Decimal              @db.Decimal(14, 4)
+  baselineDate          DateTime             @db.Date
+  baselineNotes         String?              @db.Text
+
+  // Annual Target & Stretch Horizons
+  annualTargetValue     Decimal              @db.Decimal(14, 4)
+  stretchTargetValue    Decimal?             @db.Decimal(14, 4)
+  weight                Decimal              @default(0.00) @db.Decimal(5, 2)
+  actualValueAchieved   Decimal?             @db.Decimal(14, 4)
+
+  dataCollectionSource  String               @db.VarChar(255) // e.g. "SCADA Telemetry System", "ERP Logistics"
+  verificationMethod    String               @db.Text
+  isStatutoryReportable Boolean              @default(true)
+  isActive              Boolean              @default(true)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt             DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime             @updatedAt @db.Timestamptz(6)
+
+  periodicTargets       KpiPeriodicTarget[]
+  unitTargets           UnitKpiTarget[]
+  workplanActivities    WorkplanActivity[]
+  performanceAgreementItems PerformanceAgreementItem[]
+  storyBankEntries      StoryBankEntry[]
+  matrixRows            StrategicPlanMatrixRow[]
+  subsidiaryAlignments  SubsidiaryObjectiveAlignment[]
+
+  @@unique([strategicObjectiveId, kpiCode])
+  @@index([organizationId, strategicObjectiveId])
+  @@index([organizationId, indicatorLevel])
+  @@index([organizationId, deletedAt])
+  @@map("key_performance_indicators")
+}
+
+// Periodic Breakdown of KPI Targets (Q1, Q2, Q3, Q4 Milestones)
+model KpiPeriodicTarget {
+  id                    String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String                  @db.Uuid
+  organization          Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  kpiId                 String                  @db.Uuid
+  kpi                   KeyPerformanceIndicator @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  fiscalYearId          String                  @db.Uuid
+  fiscalYear            FiscalYear              @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+
+  periodKey             String                  @db.VarChar(32) // "ANNUAL", "Q1", "Q2", "Q3", "Q4"
+  targetValue           Decimal                 @db.Decimal(14, 4)
+  actualValue           Decimal?                @db.Decimal(14, 4)
+  achievementPercent    Decimal?                @db.Decimal(7, 2)
+
+  approvalRequests      ApprovalRequest[]
+  appraisalItems        PerformanceAppraisalItem[]
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt             DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime                @updatedAt @db.Timestamptz(6)
+
+  @@unique([kpiId, fiscalYearId, periodKey])
+  @@index([organizationId, kpiId])
+  @@index([organizationId, fiscalYearId])
+  @@index([organizationId, deletedAt])
+  @@map("kpi_periodic_targets")
+}
+
+// Unit-Level Cascaded KPI Targets (Plan-to-Appraisal Closed Loop)
+model UnitKpiTarget {
+  id             String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String                  @db.Uuid
+  organization   Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  kpiId          String                  @db.Uuid
+  kpi            KeyPerformanceIndicator @relation(fields: [kpiId], references: [id], onDelete: Cascade)
+
+  orgUnitId      String                  @db.Uuid
+  orgUnit        OrgUnit                 @relation(fields: [orgUnitId], references: [id], onDelete: Cascade)
+
+  fiscalYearId   String                  @db.Uuid
+  fiscalYear     FiscalYear              @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+
+  periodKey      String                  @db.VarChar(32) // "ANNUAL", "Q1", "Q2", "Q3", "Q4"
+  targetValue    Decimal                 @db.Decimal(14, 4)
+  actualValue    Decimal?                @db.Decimal(14, 4)
+  variance       Decimal?                @db.Decimal(14, 4)
+  notes          String?                 @db.Text
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt      DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime                @updatedAt @db.Timestamptz(6)
+
+  @@unique([kpiId, orgUnitId, fiscalYearId, periodKey])
+  @@index([organizationId, kpiId])
+  @@index([organizationId, orgUnitId])
+  @@index([organizationId, fiscalYearId])
+  @@index([organizationId, deletedAt])
+  @@map("unit_kpi_targets")
+}
+
+// Presentation Section & Implementation Matrix Rows
+enum MatrixRowLevel {
+  OUTCOMES
+  OUTPUTS
+}
+
+model StrategicPlanMatrixRow {
+  id                      String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId          String                  @db.Uuid
+  organization            Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  planSourceId            String                  @db.Uuid
+  planSource              PlanSource              @relation(fields: [planSourceId], references: [id], onDelete: Cascade)
+
+  parentRowId             String?                 @db.Uuid
+  parentRow               StrategicPlanMatrixRow? @relation("MatrixRowHierarchy", fields: [parentRowId], references: [id], onDelete: Restrict)
+  childRows               StrategicPlanMatrixRow[] @relation("MatrixRowHierarchy")
+
+  section                 MatrixRowLevel          @default(OUTCOMES)
+  itemCode                String                  @db.VarChar(32) // e.g. "OUTCOME 1.1" or "OUTPUT 1.1.1"
+  sortOrder               Int                     @default(1)
+
+  objectiveId             String?                 @db.Uuid
+  objective               StrategicObjective?     @relation(fields: [objectiveId], references: [id], onDelete: SetNull)
+
+  kpiId                   String?                 @db.Uuid
+  kpi                     KeyPerformanceIndicator? @relation(fields: [kpiId], references: [id], onDelete: SetNull)
+
+  timeframe               String?                 @db.VarChar(128)
+  budgetAmount            Decimal                 @default(0.00) @db.Decimal(18, 2)
+  currency                String                  @default("USD") @db.VarChar(8)
+  budgetFormatted         String?                 @db.VarChar(64)
+
+  keyInitiativeMajor      String?                 @db.Text
+  keyInitiativeActivities String?                 @db.Text
+  status                  String                  @default("ON_TRACK") @db.VarChar(32)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt               DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime                @updatedAt @db.Timestamptz(6)
+
+  @@unique([planSourceId, itemCode])
+  @@index([organizationId, planSourceId])
+  @@index([organizationId, section])
+  @@index([parentRowId])
+  @@index([kpiId])
+  @@index([objectiveId])
+  @@index([organizationId, deletedAt])
+  @@map("strategic_plan_matrix_rows")
+}
+
+// ==============================================================================
+// 4. MONTH-BY-MONTH DEPARTMENT/UNIT WORKPLANS (DELIVERING VS SUPPORTING)
+// ==============================================================================
+
+enum WorkplanStatus {
+  DRAFT
+  SUBMITTED_FOR_REVIEW
+  APPROVED
+  REVISION_REQUESTED
+  LOCKED
+}
+
+model Workplan {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String           @db.Uuid
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  fiscalYearId       String           @db.Uuid
+  fiscalYear         FiscalYear       @relation(fields: [fiscalYearId], references: [id], onDelete: Restrict)
+
+  orgUnitId          String           @db.Uuid
+  orgUnit            OrgUnit          @relation(fields: [orgUnitId], references: [id], onDelete: Restrict)
+
+  title              String           @db.VarChar(255)
+  code               String           @db.VarChar(32)
+  version            Int              @default(1)
+  status             WorkplanStatus   @default(DRAFT)
+  totalBudget        Decimal          @default(0.00) @db.Decimal(15, 2)
+
+  remarks            String?          @db.Text
+  approvedAt         DateTime?        @db.Timestamptz(6)
+  deletedAt          DateTime?        @db.Timestamptz(6)
+
+  createdAt          DateTime         @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime         @updatedAt @db.Timestamptz(6)
+
+  activities         WorkplanActivity[]
+  approvalRequests   ApprovalRequest[]
+
+  @@unique([organizationId, fiscalYearId, orgUnitId, version])
+  @@index([organizationId, orgUnitId, status])
+  @@index([organizationId, deletedAt])
+  @@map("workplans")
+}
+
+enum ActivityDeliveryType {
+  DELIVERING_PRIMARY
+  SUPPORTING_ENABLER
+}
+
+enum ActivityStatus {
+  PLANNED
+  IN_PROGRESS
+  ON_TRACK
+  DELAYED
+  COMPLETED
+  CANCELLED
+}
+
+// Workplan Activity linked to Workplan, Objective or KPI
+model WorkplanActivity {
+  id                    String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId        String               @db.Uuid
+  organization          Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  workplanId            String               @db.Uuid
+  workplan              Workplan             @relation(fields: [workplanId], references: [id], onDelete: Cascade)
+
+  code                  String               @db.VarChar(32)
+  activityName          String               @db.VarChar(300)
+  description           String               @db.Text
+
+  strategicObjectiveId  String?              @db.Uuid
+  strategicObjective    StrategicObjective?  @relation(fields: [strategicObjectiveId], references: [id], onDelete: SetNull)
+
+  kpiId                 String?              @db.Uuid
+  kpi                   KeyPerformanceIndicator? @relation(fields: [kpiId], references: [id], onDelete: SetNull)
+
+  deliveryType          ActivityDeliveryType @default(DELIVERING_PRIMARY)
+  explicitEvidenceRequirement String         @db.Text
+  deliverable           String               @db.Text
+
+  leadMembershipId      String?              @db.Uuid
+  leadMembership        OrganizationMembership? @relation("ActivityLeadMembership", fields: [leadMembershipId], references: [id], onDelete: SetNull)
+
+  budgetAllocated       Decimal              @default(0.00) @db.Decimal(15, 2)
+  fundingSource         String?              @db.VarChar(128)
+  riskDescription       String?              @db.Text
+  mitigationStrategy    String?              @db.Text
+  status                ActivityStatus       @default(PLANNED)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt             DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt             DateTime             @updatedAt @db.Timestamptz(6)
+
+  monthlySchedules      WorkplanMonthlySchedule[]
+  performanceAgreementItems PerformanceAgreementItem[]
+  storyBankEntries      StoryBankEntry[]
+  evidenceAttachments   EvidenceAttachment[]
+
+  @@unique([workplanId, code])
+  @@index([organizationId, deliveryType])
+  @@index([organizationId, strategicObjectiveId])
+  @@index([organizationId, kpiId])
+  @@index([organizationId, leadMembershipId])
+  @@index([organizationId, deletedAt])
+  @@map("workplan_activities")
+}
+
+enum MonthlyScheduleStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  ACHIEVED
+  PARTIALLY_ACHIEVED
+  OFF_TRACK
+  DEFERRED
+}
+
+model WorkplanMonthlySchedule {
+  id                       String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId           String                 @db.Uuid
+  organization             Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  activityId               String                 @db.Uuid
+  activity                 WorkplanActivity       @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  monthIndex               Int                    // 1 to 12
+  monthName                String                 @db.VarChar(32) // e.g. "July", "August"
+
+  targetMilestone          String                 @db.Text
+  plannedMilestonePercent  Decimal                @default(0.00) @db.Decimal(5, 2)
+  plannedExpenditure       Decimal                @default(0.00) @db.Decimal(15, 2)
+
+  actualMilestoneDelivered String?                @db.Text
+  actualProgressPercent    Decimal?               @db.Decimal(5, 2)
+  actualExpenditure        Decimal?               @db.Decimal(15, 2)
+  status                   MonthlyScheduleStatus  @default(NOT_STARTED)
+  blockers                 String?                @db.Text
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt                DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt                DateTime               @updatedAt @db.Timestamptz(6)
+
+  performanceAgreementItems PerformanceAgreementItem[]
+  appraisalItems           PerformanceAppraisalItem[]
+
+  @@unique([activityId, monthIndex])
+  @@index([organizationId, activityId])
+  @@index([organizationId, status])
+  @@index([organizationId, deletedAt])
+  @@map("workplan_monthly_schedules")
+}
+
+// ==============================================================================
+// 5. SCORING RULES, GRADING SCALES, JOB DUTIES & VALUE COMPETENCIES
+// ==============================================================================
+
+enum ScoringRuleType {
+  LINEAR_INTERPOLATION
+  STEP_BANDED
+  BINARY_ALL_OR_NOTHING
+  DECREASING_PENALTY
+}
+
+model ScoringRule {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId  String          @db.Uuid
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code            String          @db.VarChar(32)
+  name            String          @db.VarChar(128)
+  ruleType        ScoringRuleType @default(LINEAR_INTERPOLATION)
+  description     String?         @db.Text
+  capAt100Percent Boolean         @default(false)
+  minThreshold    Decimal?        @db.Decimal(5, 2)
+  maxCap          Decimal?        @db.Decimal(5, 2)
+  formulaConfig   Json?
+  isDefault       Boolean         @default(false)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt       DateTime        @default(now()) @db.Timestamptz(6)
+  updatedAt       DateTime        @updatedAt @db.Timestamptz(6)
+
+  agreementItems  PerformanceAgreementItem[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, deletedAt])
+  @@map("scoring_rules")
+}
+
+model GradingScale {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String         @db.Uuid
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code           String         @db.VarChar(32)
+  name           String         @db.VarChar(128)
+  versionNo      Int            @default(1)
+  description    String?        @db.Text
+  isCurrent      Boolean        @default(true)
+  isDefault      Boolean        @default(false)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt      DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @db.Timestamptz(6)
+
+  bands          GradingBand[]
+  appraisals     PerformanceAppraisal[]
+
+  @@unique([organizationId, code, versionNo])
+  @@index([organizationId, deletedAt])
+  @@map("grading_scales")
+}
+
+model GradingBand {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String        @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  gradingScaleId String        @db.Uuid
+  gradingScale   GradingScale  @relation(fields: [gradingScaleId], references: [id], onDelete: Cascade)
+
+  gradeCode      String        @db.VarChar(32) // "EXCELLENT", "VERY_GOOD", "GOOD", "FAIR", "POOR"
+  gradeName      String        @db.VarChar(128)
+  minScore       Decimal       @db.Decimal(5, 2)
+  maxScore       Decimal       @db.Decimal(5, 2)
+  points         Decimal       @db.Decimal(5, 2)
+  isPassing      Boolean       @default(true)
+  colorHex       String?       @db.VarChar(16)
+  sortOrder      Int           @default(1)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(6)
+
+  appraisals                  PerformanceAppraisal[]
+  preCalibrationAdjustments   CalibrationAdjustment[]       @relation("PreCalibrationBand")
+  postCalibrationAdjustments  CalibrationAdjustment[]       @relation("PostCalibrationBand")
+  appeals                     PerformanceAppraisalAppeal[]
+  distributionRollups         AppraisalDistributionRollup[]
+
+  @@unique([gradingScaleId, gradeCode])
+  @@index([organizationId, gradingScaleId])
+  @@index([organizationId, deletedAt])
+  @@map("grading_bands")
+}
+
+// Versioned Job Description Baseline Duties
+model JobDescriptionDuty {
+  id                  String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId      String                  @db.Uuid
+  organization        Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  jobRoleCode         String                  @db.VarChar(64)
+  jobTitle            String                  @db.VarChar(150)
+  dutyCode            String                  @db.VarChar(32)
+  title               String                  @db.VarChar(255)
+  description         String                  @db.Text
+  category            String                  @default("CORE_ROUTINE") @db.VarChar(64)
+
+  weightageGuidance   Decimal?                @default(15.00) @db.Decimal(5, 2)
+  standardDeliverable String?                 @db.Text
+  frequency           String?                 @default("CONTINUOUS") @db.VarChar(32)
+
+  // Direct mapping to Competency
+  competencyId        String?                 @db.Uuid
+  competency          Competency?             @relation(fields: [competencyId], references: [id], onDelete: SetNull)
+
+  // Substantive Officer Assignment
+  assignedMembershipId String?                @db.Uuid
+  assignedMembership  OrganizationMembership? @relation("MembershipAssignedDuties", fields: [assignedMembershipId], references: [id], onDelete: SetNull)
+
+  versionNo           Int                     @default(1)
+  isCurrent           Boolean                 @default(true)
+
+  deletedAt           DateTime?               @db.Timestamptz(6)
+  createdAt           DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime                @updatedAt @db.Timestamptz(6)
+
+  agreementItems      PerformanceAgreementItem[]
+  requisitions        RecruitmentRequisition[]
+
+  @@unique([organizationId, jobRoleCode, dutyCode, versionNo])
+  @@index([organizationId, jobRoleCode])
+  @@index([organizationId, competencyId])
+  @@index([organizationId, assignedMembershipId])
+  @@index([organizationId, deletedAt])
+  @@map("job_description_duties")
+}
+
+// Values, Behavioral & Leadership Competencies
+model Competency {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String             @db.Uuid
+  organization         Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code                 String             @db.VarChar(32)
+  name                 String             @db.VarChar(128)
+  definition           String             @db.Text
+  behavioralIndicators String             @db.Text
+  weight               Decimal            @default(10.00) @db.Decimal(5, 2)
+  category             String             @default("CORE_VALUES") @db.VarChar(64)
+  competencyType       String?            @default("BEHAVIORAL") @db.VarChar(32) // "FUNCTIONAL", "BEHAVIORAL", "LEADERSHIP"
+  requiredLevel        String?            @default("ADVANCED") @db.VarChar(32)   // "BASIC", "INTERMEDIATE", "ADVANCED", "MASTERY"
+  isActive             Boolean            @default(true)
+
+  deletedAt            DateTime?          @db.Timestamptz(6)
+  createdAt            DateTime           @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime           @updatedAt @db.Timestamptz(6)
+
+  jobDuties            JobDescriptionDuty[]
+  ratings              CompetencyRating[]
+  agreementItems       PerformanceAgreementItem[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, competencyType])
+  @@index([organizationId, deletedAt])
+  @@map("competencies")
+}
+
+enum RequisitionStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  ACTIVE_ADVERTISED
+  INTERVIEWING
+  OFFER_MADE
+  FILLED
+  CANCELLED
+}
+
+enum ApplicantStage {
+  SOURCED
+  SCREENING
+  TECHNICAL_INTERVIEW
+  BACKGROUND_VETTING
+  OFFER_MADE
+  DEPLOYED
+  REJECTED
+}
+
+// Enterprise Staff Recruitment & Headcount Requisition
+model RecruitmentRequisition {
+  id                         String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId             String                  @db.Uuid
+  organization               Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  orgUnitId                  String                  @db.Uuid
+  orgUnit                    OrgUnit                 @relation(fields: [orgUnitId], references: [id], onDelete: Restrict)
+
+  requisitionCode            String                  @db.VarChar(64)
+  jobTitle                   String                  @db.VarChar(150)
+  jobRoleCode                String?                 @db.VarChar(64)
+  salaryGrade                String                  @db.VarChar(64)
+  headcountNeeded            Int                     @default(1)
+  budgetAmount               Decimal?                @db.Decimal(14, 2)
+  status                     RequisitionStatus       @default(DRAFT)
+
+  // Primary linked baseline Job Description duty
+  primaryDutyId              String?                 @db.Uuid
+  primaryDuty                JobDescriptionDuty?     @relation(fields: [primaryDutyId], references: [id], onDelete: SetNull)
+
+  // Hiring Manager (Supervisory or Dept Head Membership)
+  hiringManagerMembershipId  String?                 @db.Uuid
+  hiringManagerMembership    OrganizationMembership? @relation("RequisitionHiringManager", fields: [hiringManagerMembershipId], references: [id], onDelete: SetNull)
+
+  openingDate                DateTime                @db.Date
+  targetClosingDate          DateTime?               @db.Date
+  requiredCompetencies       Json?
+
+  deletedAt                  DateTime?               @db.Timestamptz(6)
+  createdAt                  DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt                  DateTime                @updatedAt @db.Timestamptz(6)
+
+  applicants                 CandidateApplicant[]
+
+  @@unique([organizationId, requisitionCode])
+  @@index([organizationId, orgUnitId])
+  @@index([organizationId, status])
+  @@index([organizationId, primaryDutyId])
+  @@index([organizationId, hiringManagerMembershipId])
+  @@index([organizationId, deletedAt])
+  @@map("recruitment_requisitions")
+}
+
+// Candidate Applicants in Recruitment Pipeline
+model CandidateApplicant {
+  id                         String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId             String                  @db.Uuid
+  organization               Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  requisitionId              String                  @db.Uuid
+  requisition                RecruitmentRequisition  @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+
+  fullName                   String                  @db.VarChar(200)
+  email                      String                  @db.VarChar(255)
+  phoneNumber                String?                 @db.VarChar(32)
+  experienceYears            Decimal?                @db.Decimal(4, 1)
+  currentOrganization        String?                 @db.VarChar(255)
+  matchScore                 Decimal?                @db.Decimal(5, 2)
+  stage                      ApplicantStage          @default(SOURCED)
+  appliedDate                DateTime                @default(now()) @db.Timestamptz(6)
+
+  // On successful appointment / onboarding, link to substantive Membership
+  deployedMembershipId       String?                 @db.Uuid
+  deployedMembership         OrganizationMembership? @relation("ApplicantDeployedMembership", fields: [deployedMembershipId], references: [id], onDelete: SetNull)
+
+  deletedAt                  DateTime?               @db.Timestamptz(6)
+  createdAt                  DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt                  DateTime                @updatedAt @db.Timestamptz(6)
+
+  @@index([organizationId, requisitionId])
+  @@index([organizationId, stage])
+  @@index([organizationId, deployedMembershipId])
+  @@index([organizationId, deletedAt])
+  @@map("candidate_applicants")
+}
+
+model CompetencyRating {
+  id                      String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId          String               @db.Uuid
+  organization            Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  appraisalId             String               @db.Uuid
+  appraisal               PerformanceAppraisal @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  competencyId            String               @db.Uuid
+  competency              Competency           @relation(fields: [competencyId], references: [id], onDelete: Restrict)
+
+  selfRating              Decimal?             @db.Decimal(5, 2)
+  supervisorRating        Decimal?             @db.Decimal(5, 2)
+  agreedRating            Decimal?             @db.Decimal(5, 2)
+  behavioralEvidenceNotes String?              @db.Text
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt               DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime             @updatedAt @db.Timestamptz(6)
+
+  @@unique([appraisalId, competencyId])
+  @@index([organizationId, appraisalId])
+  @@index([organizationId, competencyId])
+  @@index([organizationId, deletedAt])
+  @@map("competency_ratings")
+}
+
+// Tenant Lookup Table for Evidence Categories (Replaced Hardcoded Enum)
+model EvidenceCategory {
+  id             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String         @db.Uuid
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code           String         @db.VarChar(64) // e.g. "COMPLETION_CERTIFICATE", "TECHNICAL_TEST_REPORT"
+  name           String         @db.VarChar(128)
+  description    String?        @db.Text
+  isDefault      Boolean        @default(false)
+  isActive       Boolean        @default(true)
+  sortOrder      Int            @default(1)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt      DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime       @updatedAt @db.Timestamptz(6)
+
+  attachments    EvidenceAttachment[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, deletedAt])
+  @@map("evidence_categories")
+}
+
+// ==============================================================================
+// 6. INDIVIDUAL PERFORMANCE AGREEMENTS (VERSIONED) & APPRAISALS
+// ==============================================================================
+
+enum AgreementStatus {
+  DRAFT
+  SUBMITTED_TO_SUPERVISOR
+  IN_NEGOTIATION
+  SIGNED_MUTUALLY         // Legally executed at start of year
+  FROZEN_ACTIVE           // Active operating covenant during fiscal year
+  AMENDED_BY_ADDENDUM     // Formally modified by signed addendum
+}
+
+enum AppraisalCycle {
+  MID_YEAR_REVIEW         // Optional formal mid-year progress review
+  ANNUAL_FINAL_EVALUATION // Mandatory formal end-of-year appraisal & scoring
+  PERIODIC_MONITORING     // Quarterly milestone monitoring review
+}
+
+enum AppraisalStatus {
+  APPRAISAL_DRAFT
+  SELF_REVIEW_SUBMITTED
+  SUPERVISOR_EVALUATED
+  JOINT_REVIEW_CONCLUDED
+  COUNTERSIGNED_CERTIFIED // Formally closed and audited
+  DISPUTE_APPEAL
+}
+
+// DOCUMENT 1: INDIVIDUAL PERFORMANCE AGREEMENT MASTER
+model PerformanceAgreement {
+  id                             String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId                 String                  @db.Uuid
+  organization                   Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  fiscalYearId                   String                  @db.Uuid
+  fiscalYear                     FiscalYear              @relation(fields: [fiscalYearId], references: [id], onDelete: Restrict)
+
+  // Performer (Employee Membership - Tenant Composite Key)
+  membershipId                   String                  @db.Uuid
+  membership                     OrganizationMembership  @relation("PerformerAgreement", fields: [membershipId], references: [id], onDelete: Restrict)
+
+  orgUnitId                      String                  @db.Uuid
+  orgUnit                        OrgUnit                 @relation(fields: [orgUnitId], references: [id], onDelete: Restrict)
+
+  supervisorMembershipId         String                  @db.Uuid
+  supervisorMembership           OrganizationMembership  @relation("SupervisorAgreement", fields: [supervisorMembershipId], references: [id], onDelete: Restrict)
+
+  countersigningMembershipId     String?                 @db.Uuid
+  countersigningMembership       OrganizationMembership? @relation("CountersigningAgreement", fields: [countersigningMembershipId], references: [id], onDelete: SetNull)
+
+  agreementCode                  String                  @db.VarChar(64) // e.g. "IPA-2025/2026-8810"
+  title                          String                  @db.VarChar(255)
+  status                         AgreementStatus         @default(DRAFT)
+  currentVersionNo               Int                     @default(1)
+
+  deletedAt                      DateTime?               @db.Timestamptz(6)
+  createdAt                      DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt                      DateTime                @updatedAt @db.Timestamptz(6)
+
+  // Versioned agreement lifecycle
+  versions                       PerformanceAgreementVersion[]
+  items                          PerformanceAgreementItem[]
+  appraisals                     PerformanceAppraisal[]
+  approvalRequests               ApprovalRequest[]
+
+  @@unique([organizationId, fiscalYearId, membershipId])
+  @@index([organizationId, membershipId, status])
+  @@index([organizationId, supervisorMembershipId])
+  @@index([organizationId, deletedAt])
+  @@map("performance_agreements")
+}
+
+// Immutable version record of a Performance Agreement
+model PerformanceAgreementVersion {
+  id                      String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId          String                  @db.Uuid
+  organization            Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  agreementId             String                  @db.Uuid
+  agreement               PerformanceAgreement    @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+
+  versionNo               Int                     @default(1)
+  status                  AgreementStatus         @default(DRAFT)
+  totalWeight             Decimal                 @default(100.00) @db.Decimal(5, 2)
+
+  signedAt                DateTime?               @db.Timestamptz(6)
+  signatureHash           String?                 @db.VarChar(128)
+  reason                  String?                 @db.Text
+  isCurrent               Boolean                 @default(true)
+
+  effectiveFrom           DateTime                @default(now()) @db.Date
+  effectiveTo             DateTime?               @db.Date
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt               DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime                @updatedAt @db.Timestamptz(6)
+
+  items                   PerformanceAgreementItem[]
+  addendumsAsAmended      PerformanceAgreementAddendum[] @relation("AmendedVersion")
+  addendumsAsNew          PerformanceAgreementAddendum[] @relation("NewVersion")
+
+  @@unique([agreementId, versionNo])
+  @@index([organizationId, agreementId, isCurrent])
+  @@index([organizationId, deletedAt])
+  @@map("performance_agreement_versions")
+}
+
+// Formal addendum modifying an executed PerformanceAgreementVersion
+model PerformanceAgreementAddendum {
+  id                               String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId                   String                      @db.Uuid
+  organization                     Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  amendedVersionId                 String                      @db.Uuid
+  amendedVersion                   PerformanceAgreementVersion @relation("AmendedVersion", fields: [amendedVersionId], references: [id], onDelete: Restrict)
+
+  newVersionId                     String                      @db.Uuid
+  newVersion                       PerformanceAgreementVersion @relation("NewVersion", fields: [newVersionId], references: [id], onDelete: Restrict)
+
+  addendumNumber                   String                      @db.VarChar(64) // e.g. "ADDENDUM-01-FY26"
+  justification                    String                      @db.Text
+  approvedBySupervisorMembershipId String                      @db.Uuid
+  approvedBySupervisorMembership   OrganizationMembership      @relation("AddendumApprover", fields: [approvedBySupervisorMembershipId], references: [id], onDelete: Restrict)
+  approvedAt                       DateTime?                   @db.Timestamptz(6)
+  effectiveDate                    DateTime                    @db.Date
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt                        DateTime                    @default(now()) @db.Timestamptz(6)
+
+  @@unique([amendedVersionId, addendumNumber])
+  @@index([organizationId, deletedAt])
+  @@map("performance_agreement_addendums")
+}
+
+enum PerformanceAgreementItemType {
+  WORKPLAN_CASCADE
+  JOB_DESCRIPTION
+  VALUES_COMPETENCY
+}
+
+// Commitment Item belongs strictly to a PerformanceAgreementVersion with NUMERIC target values & scoring rules
+model PerformanceAgreementItem {
+  id                         String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId             String                      @db.Uuid
+  organization               Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  agreementId                String                      @db.Uuid
+  agreement                  PerformanceAgreement        @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+
+  agreementVersionId         String                      @db.Uuid
+  agreementVersion           PerformanceAgreementVersion @relation(fields: [agreementVersionId], references: [id], onDelete: Cascade)
+
+  itemType                   PerformanceAgreementItemType @default(WORKPLAN_CASCADE)
+  itemOrder                  Int                         @default(1)
+
+  // Anchor References
+  planSourceId               String?                     @db.Uuid
+  planSource                 PlanSource?                 @relation(fields: [planSourceId], references: [id], onDelete: SetNull)
+
+  strategicObjectiveId       String?                     @db.Uuid
+  strategicObjective         StrategicObjective?         @relation(fields: [strategicObjectiveId], references: [id], onDelete: SetNull)
+
+  kpiId                      String?                     @db.Uuid
+  kpi                        KeyPerformanceIndicator?    @relation(fields: [kpiId], references: [id], onDelete: SetNull)
+
+  workplanActivityId         String?                     @db.Uuid
+  workplanActivity           WorkplanActivity?           @relation(fields: [workplanActivityId], references: [id], onDelete: SetNull)
+
+  workplanMonthlyScheduleId  String?                     @db.Uuid
+  workplanMonthlySchedule    WorkplanMonthlySchedule?    @relation(fields: [workplanMonthlyScheduleId], references: [id], onDelete: SetNull)
+
+  jobDescriptionDutyId       String?                     @db.Uuid
+  jobDescriptionDuty         JobDescriptionDuty?         @relation(fields: [jobDescriptionDutyId], references: [id], onDelete: SetNull)
+
+  competencyId               String?                     @db.Uuid
+  competency                 Competency?                 @relation(fields: [competencyId], references: [id], onDelete: SetNull)
+
+  // Display Labels (Keep existing textual labels for presentation)
+  targetDisplayLabel         String                      @db.Text
+  deliverableOutput          String                      @db.Text
+  performanceStandard        String                      @db.Text
+
+  // NUMERIC TARGETS & SCORING DEFINITION (Phase 5 Plan-to-Appraisal Loop)
+  targetValue                Decimal                     @default(0.0000) @db.Decimal(14, 4)
+  baselineValue              Decimal?                    @db.Decimal(14, 4)
+  thresholdValue             Decimal?                    @db.Decimal(14, 4)
+  stretchValue               Decimal?                    @db.Decimal(14, 4)
+  directionOfGood            KpiDirectionOfGood          @default(INCREASING_BETTER)
+
+  scoringRuleId              String?                     @db.Uuid
+  scoringRule                ScoringRule?                @relation(fields: [scoringRuleId], references: [id], onDelete: SetNull)
+
+  weight                     Decimal                     @db.Decimal(5, 2) // Must sum to exactly 100.00
+  meansOfVerification        String                      @db.Text
+  agreedMilestoneDates       String?                     @db.Text
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt                  DateTime                    @default(now()) @db.Timestamptz(6)
+  updatedAt                  DateTime                    @updatedAt @db.Timestamptz(6)
+
+  appraisalItems             PerformanceAppraisalItem[]
+
+  @@unique([agreementVersionId, itemOrder])
+  @@index([organizationId, agreementId])
+  @@index([organizationId, itemType])
+  @@index([strategicObjectiveId])
+  @@index([planSourceId])
+  @@index([workplanActivityId])
+  @@index([jobDescriptionDutyId])
+  @@index([competencyId])
+  @@index([scoringRuleId])
+  @@index([organizationId, deletedAt])
+  @@map("performance_agreement_items")
+}
+
+// DOCUMENT 2: INDIVIDUAL PERFORMANCE APPRAISAL (Period-Keyed with Versioned Grading Scale)
+model PerformanceAppraisal {
+  id                             String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId                 String                  @db.Uuid
+  organization                   Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  performanceAgreementId        String                  @db.Uuid
+  performanceAgreement          PerformanceAgreement    @relation(fields: [performanceAgreementId], references: [id], onDelete: Restrict)
+
+  membershipId                   String                  @db.Uuid
+  membership                     OrganizationMembership  @relation("PerformerAppraisal", fields: [membershipId], references: [id], onDelete: Restrict)
+
+  evaluatorSupervisorMembershipId String                 @db.Uuid
+  evaluatorSupervisorMembership   OrganizationMembership  @relation("SupervisorAppraisal", fields: [evaluatorSupervisorMembershipId], references: [id], onDelete: Restrict)
+
+  countersigningMembershipId     String?                 @db.Uuid
+  countersigningMembership       OrganizationMembership? @relation("CountersigningAppraisal", fields: [countersigningMembershipId], references: [id], onDelete: SetNull)
+
+  appraisalCode                  String                  @db.VarChar(64) // e.g. "APR-2025/2026-Q1-8810"
+  cycle                          AppraisalCycle          @default(ANNUAL_FINAL_EVALUATION)
+  periodKey                      String                  @default("ANNUAL") @db.VarChar(32) // "ANNUAL", "Q1", "Q2", "Q3", "Q4"
+  status                         AppraisalStatus         @default(APPRAISAL_DRAFT)
+
+  periodStartDate                DateTime                @db.Date
+  periodEndDate                  DateTime                @db.Date
+
+  // Scoring & Versioned Grading
+  rawAverageScore                Decimal?                @db.Decimal(5, 2)
+  compositeWeightedScore         Decimal?                @db.Decimal(5, 2)
+
+  // Versioned Organization Grading Scale Linkage
+  gradingScaleId                 String?                 @db.Uuid
+  gradingScale                   GradingScale?           @relation(fields: [gradingScaleId], references: [id], onDelete: SetNull)
+  gradingBandId                  String?                 @db.Uuid
+  gradingBand                    GradingBand?            @relation(fields: [gradingBandId], references: [id], onDelete: SetNull)
+  gradeCode                      String?                 @db.VarChar(32) // e.g. "GRADE_EXCELLENT", "GRADE_GOOD"
+
+  supervisorRemarks              String?                 @db.Text
+  employeeSelfAssessment         String?                 @db.Text
+  remediationPlan                String?                 @db.Text
+  commendationNote               String?                 @db.Text
+
+  // Execution Signatures
+  employeeEvaluatedAt            DateTime?               @db.Timestamptz(6)
+  supervisorEvaluatedAt          DateTime?               @db.Timestamptz(6)
+  countersignedAt                DateTime?               @db.Timestamptz(6)
+  auditSignoffHash               String?                 @db.VarChar(128)
+
+  deletedAt                      DateTime?               @db.Timestamptz(6)
+  createdAt                      DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt                      DateTime                @updatedAt @db.Timestamptz(6)
+
+  items                          PerformanceAppraisalItem[]
+  competencyRatings              CompetencyRating[]
+  calibrationAdjustments         CalibrationAdjustment[]
+  appeals                        PerformanceAppraisalAppeal[]
+  approvalRequests               ApprovalRequest[]
+
+  @@unique([performanceAgreementId, cycle, periodKey])
+  @@index([organizationId, membershipId, status])
+  @@index([organizationId, deletedAt])
+  @@index([gradingScaleId])
+  @@index([gradingBandId])
+  @@map("performance_appraisals")
+}
+
+// Appraisal Evaluation Line Item (Derivable Actuals & Source Tracking)
+model PerformanceAppraisalItem {
+  id                      String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId          String                  @db.Uuid
+  organization            Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  appraisalId             String                  @db.Uuid
+  appraisal               PerformanceAppraisal    @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  // Direct reference to the specific Agreement commitment item
+  agreementItemId         String                  @db.Uuid
+  agreementItem           PerformanceAgreementItem @relation(fields: [agreementItemId], references: [id], onDelete: Restrict)
+
+  // NUMERIC ACTUALS & SOURCE REFERENCE (Phase 5 Scoring Path)
+  actualValue             Decimal?                @db.Decimal(14, 4)
+  achievementPercent      Decimal?                @db.Decimal(7, 2) // e.g. 105.50%
+  actualSourceType        String                  @default("MANUAL_ENTRY") @db.VarChar(64) // "MANUAL_ENTRY", "KPI_PERIODIC_TARGET", "WORKPLAN_MONTHLY_SCHEDULE"
+
+  // Automated Derivation Source Pointers
+  kpiPeriodicTargetId     String?                 @db.Uuid
+  kpiPeriodicTarget       KpiPeriodicTarget?      @relation(fields: [kpiPeriodicTargetId], references: [id], onDelete: SetNull)
+
+  workplanMonthlyScheduleId String?               @db.Uuid
+  workplanMonthlySchedule WorkplanMonthlySchedule? @relation(fields: [workplanMonthlyScheduleId], references: [id], onDelete: SetNull)
+
+  // Textual Reporting & Variances
+  actualReportedOutput    String                  @db.Text
+  varianceExplanation     String?                 @db.Text
+
+  // Ratings
+  selfRating              Decimal?                @db.Decimal(5, 2)
+  supervisorRating        Decimal?                @db.Decimal(5, 2)
+  agreedScore             Decimal?                @db.Decimal(5, 2)
+  weightedScore           Decimal?                @db.Decimal(5, 2)
+
+  // Evidence Verification
+  verifiedEvidenceCount   Int                     @default(0)
+  evaluatorRemarks        String?                 @db.Text
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt               DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime                @updatedAt @db.Timestamptz(6)
+
+  storyBankEntries        StoryBankEntry[]
+  evidenceAttachments     EvidenceAttachment[]
+
+  @@unique([appraisalId, agreementItemId])
+  @@index([organizationId, appraisalId])
+  @@index([organizationId, agreementItemId])
+  @@index([kpiPeriodicTargetId])
+  @@index([workplanMonthlyScheduleId])
+  @@index([organizationId, deletedAt])
+  @@map("performance_appraisal_items")
+}
+
+// ==============================================================================
+// 7. CALIBRATION MODERATION SESSIONS, ADJUSTMENTS & APPEALS
+// ==============================================================================
+
+enum CalibrationStatus {
+  SCHEDULED
+  IN_PROGRESS
+  CONCLUDED
+  CANCELLED
+}
+
+model CalibrationSession {
+  id                      String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId          String                  @db.Uuid
+  organization            Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  fiscalYearId            String                  @db.Uuid
+  fiscalYear              FiscalYear              @relation(fields: [fiscalYearId], references: [id], onDelete: Restrict)
+
+  orgUnitId               String?                 @db.Uuid
+  orgUnit                 OrgUnit?                @relation(fields: [orgUnitId], references: [id], onDelete: SetNull)
+
+  sessionCode             String                  @db.VarChar(64)
+  title                   String                  @db.VarChar(255)
+  sessionDate             DateTime                @db.Date
+  status                  CalibrationStatus       @default(SCHEDULED)
+
+  committeeChairMembershipId String?              @db.Uuid
+  committeeChairMembership OrganizationMembership? @relation("CalibrationChair", fields: [committeeChairMembershipId], references: [id], onDelete: SetNull)
+
+  remarks                 String?                 @db.Text
+  concludedAt             DateTime?               @db.Timestamptz(6)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt               DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt               DateTime                @updatedAt @db.Timestamptz(6)
+
+  adjustments             CalibrationAdjustment[]
+
+  @@unique([organizationId, sessionCode])
+  @@index([organizationId, fiscalYearId])
+  @@index([organizationId, deletedAt])
+  @@map("calibration_sessions")
+}
+
+model CalibrationAdjustment {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String                 @db.Uuid
+  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  sessionId            String                 @db.Uuid
+  session              CalibrationSession     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  appraisalId          String                 @db.Uuid
+  appraisal            PerformanceAppraisal   @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  preCalibrationScore  Decimal                @db.Decimal(5, 2)
+  postCalibrationScore Decimal                @db.Decimal(5, 2)
+
+  // Direct closed-loop linkage to versioned GradingBand
+  preCalibrationBandId String?                @db.Uuid
+  preCalibrationBand   GradingBand?           @relation("PreCalibrationBand", fields: [preCalibrationBandId], references: [id], onDelete: SetNull)
+  postCalibrationBandId String?               @db.Uuid
+  postCalibrationBand  GradingBand?           @relation("PostCalibrationBand", fields: [postCalibrationBandId], references: [id], onDelete: SetNull)
+
+  preCalibrationGrade  String                 @db.VarChar(32)
+  postCalibrationGrade String                 @db.VarChar(32)
+  justificationReason  String                 @db.Text
+
+  approvedByMembershipId String               @db.Uuid
+  approvedByMembership OrganizationMembership @relation("CalibrationApprover", fields: [approvedByMembershipId], references: [id], onDelete: Restrict)
+
+  deletedAt            DateTime?              @db.Timestamptz(6)
+  adjustedAt           DateTime               @default(now()) @db.Timestamptz(6)
+
+  @@unique([sessionId, appraisalId])
+  @@index([organizationId, appraisalId])
+  @@index([preCalibrationBandId])
+  @@index([postCalibrationBandId])
+  @@index([organizationId, deletedAt])
+  @@map("calibration_adjustments")
+}
+
+enum AppealStatus {
+  FILED
+  COMMITTEE_REVIEW
+  DETERMINED
+  WITHDRAWN
+}
+
+enum AppealDecision {
+  UPHELD_SCORE_INCREASED
+  UPHELD_SCORE_DECREASED
+  DISMISSED_CONFIRMED
+  REFERRED_FOR_REEVALUATION
+}
+
+model PerformanceAppraisalAppeal {
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId       String                 @db.Uuid
+  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  appraisalId          String                 @db.Uuid
+  appraisal            PerformanceAppraisal   @relation(fields: [appraisalId], references: [id], onDelete: Cascade)
+
+  appellantMembershipId String                @db.Uuid
+  appellantMembership  OrganizationMembership @relation("AppraisalAppellant", fields: [appellantMembershipId], references: [id], onDelete: Restrict)
+
+  appealCode           String                 @db.VarChar(64)
+  groundsOfAppeal      String                 @db.Text
+  disputedItemIds      Json?
+  status               AppealStatus           @default(FILED)
+
+  decision             AppealDecision?
+  originalScore        Decimal                @db.Decimal(5, 2)
+  adjustedScore        Decimal?               @db.Decimal(5, 2)
+
+  // Direct linkage to revised GradingBand upon appeal resolution
+  revisedGradingBandId String?                @db.Uuid
+  revisedGradingBand   GradingBand?           @relation(fields: [revisedGradingBandId], references: [id], onDelete: SetNull)
+  revisedGradeCode     String?                @db.VarChar(32)
+  resolutionSummary    String?                @db.Text
+
+  decidedByMembershipId String?               @db.Uuid
+  decidedByMembership  OrganizationMembership? @relation("AppealDeterminer", fields: [decidedByMembershipId], references: [id], onDelete: SetNull)
+  decidedAt            DateTime?              @db.Timestamptz(6)
+
+  deletedAt            DateTime?              @db.Timestamptz(6)
+  createdAt            DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt            DateTime               @updatedAt @db.Timestamptz(6)
+
+  @@unique([organizationId, appealCode])
+  @@index([organizationId, appraisalId])
+  @@index([organizationId, appellantMembershipId])
+  @@index([revisedGradingBandId])
+  @@index([organizationId, deletedAt])
+  @@map("performance_appraisal_appeals")
+}
+
+// ==============================================================================
+// 8. CONFIGURABLE APPROVAL WORKFLOWS, REQUEST KINDS & MULTI-STAGE CHARTERS
+// ==============================================================================
+
+enum ApprovalStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  REVISION_REQUESTED
+  CANCELLED
+}
+
+enum ApprovalActionDecision {
+  APPROVE
+  REJECT
+  REQUEST_REVISION
+  DELEGATE
+}
+
+enum ApproverScope {
+  SAME_UNIT
+  PARENT_UNIT
+  ORG_WIDE
+  EXECUTIVE_OFFICE
+}
+
+enum ApproverDirection {
+  UP_FROM_REQUESTER
+  DOWN
+}
+
+enum ApproverFallbackAction {
+  SKIP
+  GO_UP
+  USE_DELEGATE
+  ESCALATE_TO_ROLE
+}
+
+enum ParallelExecutionType {
+  ALL_MUST_APPROVE
+  ANY_ONE_APPROVES
+}
+
+enum WorkflowEscalationAction {
+  ESCALATE_TO_ROLE
+  ESCALATE_TO_SUPERVISOR
+  AUTO_APPROVE
+  NOTIFY_ADMIN
+}
+
+// Request kinds are a tenant-managed table (workplan, agreement, appraisal, requisition, evidence sign-off, memo, KPI actuals, restructure)
+model ApprovalRequestKind {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String                 @db.Uuid
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code                   String                 @db.VarChar(64) // e.g. "WORKPLAN", "PERFORMANCE_AGREEMENT", "APPRAISAL", "REQUISITION", "EVIDENCE_SIGNOFF", "MEMO", "KPI_ACTUALS", "RESTRUCTURE"
+  name                   String                 @db.VarChar(128) // e.g. "Operational Workplan", "Performance Contract"
+  description            String?                @db.Text
+  icon                   String?                @db.VarChar(64) // e.g. "FolderTree", "FileSignature", "FileCheck", "Users", "Layers"
+  category               String?                @db.VarChar(64) // e.g. "OPERATIONS", "HUMAN_CAPITAL", "GOVERNANCE", "FINANCE"
+  isSystemDefault        Boolean                @default(false)
+  slaDefaultHours        Int                    @default(48)
+
+  deletedAt              DateTime?              @db.Timestamptz(6)
+  createdAt              DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime               @updatedAt @db.Timestamptz(6)
+
+  workflows              ApprovalWorkflow[]
+  requests               ApprovalRequest[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, deletedAt])
+  @@map("approval_request_kinds")
+}
+
+// Versioned workflow definition per organization and per request kind
+model ApprovalWorkflow {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String                 @db.Uuid
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  requestKindId          String                 @db.Uuid
+  requestKind            ApprovalRequestKind    @relation(fields: [requestKindId], references: [id], onDelete: Restrict)
+
+  code                   String                 @db.VarChar(64) // e.g. "WF-WORKPLAN-STANDARD", "WF-CAPEX-APPROVAL"
+  name                   String                 @db.VarChar(128)
+  version                Int                    @default(1)
+  description            String?                @db.Text
+  isDefault              Boolean                @default(true)
+  isActive               Boolean                @default(true)
+
+  deletedAt              DateTime?              @db.Timestamptz(6)
+  createdAt              DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime               @updatedAt @db.Timestamptz(6)
+
+  stages                 ApprovalStageConfig[]
+  requests               ApprovalRequest[]
+
+  @@unique([organizationId, requestKindId, version, code])
+  @@index([organizationId, requestKindId, isActive])
+  @@index([organizationId, deletedAt])
+  @@map("approval_workflows")
+}
+
+// Multi-stage approval charter step with rules, conditions, parallel groups & fallbacks
+model ApprovalStageConfig {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String                 @db.Uuid
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  workflowId             String                 @db.Uuid
+  workflow               ApprovalWorkflow       @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  stageOrder             Int
+  stageName              String                 @db.VarChar(128)
+  description            String?                @db.Text
+
+  // Approver Rule (Role, Target Unit Type, Direction, Levels, Scope)
+  roleDefinitionId       String?                @db.Uuid
+  roleDefinition         RoleDefinition?        @relation("StageApproverRole", fields: [roleDefinitionId], references: [id], onDelete: SetNull)
+
+  targetUnitTypeId       String?                @db.Uuid
+  targetUnitType         UnitType?              @relation(fields: [targetUnitTypeId], references: [id], onDelete: SetNull)
+
+  direction              ApproverDirection      @default(UP_FROM_REQUESTER)
+  levelsUp               Int                    @default(1)
+  approverScope          ApproverScope          @default(ORG_WIDE)
+
+  designatedMembershipId String?                @db.Uuid
+  designatedMembership   OrganizationMembership? @relation("DesignatedStageApprover", fields: [designatedMembershipId], references: [id], onDelete: SetNull)
+
+  // Vacancy / Inactive Fallback Rule
+  fallbackAction         ApproverFallbackAction @default(GO_UP)
+  fallbackRoleDefinitionId String?              @db.Uuid
+  fallbackRoleDefinition RoleDefinition?        @relation("FallbackRoleStages", fields: [fallbackRoleDefinitionId], references: [id], onDelete: SetNull)
+
+  // Allowed Actions
+  canApprove             Boolean                @default(true)
+  canReject              Boolean                @default(true)
+  canRequestRevision     Boolean                @default(true)
+  canDelegate            Boolean                @default(true)
+
+  // Time Limit & Escalation
+  slaHours               Int                    @default(48)
+  escalationAction       WorkflowEscalationAction @default(ESCALATE_TO_ROLE)
+  escalationRoleDefinitionId String?            @db.Uuid
+  escalationRoleDefinition RoleDefinition?      @relation("EscalationRoleStages", fields: [escalationRoleDefinitionId], references: [id], onDelete: SetNull)
+
+  // Parallel Stages
+  isParallel             Boolean                @default(false)
+  parallelGroupKey       String?                @db.VarChar(64)
+  parallelExecutionType  ParallelExecutionType  @default(ALL_MUST_APPROVE)
+
+  // Pre-compiled / Validated JSON Conditions
+  conditionsJson         Json?
+
+  deletedAt              DateTime?              @db.Timestamptz(6)
+  createdAt              DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime               @updatedAt @db.Timestamptz(6)
+
+  conditions             WorkflowStageCondition[]
+  actions                ApprovalAction[]
+
+  @@unique([workflowId, stageOrder])
+  @@index([organizationId, workflowId])
+  @@index([organizationId, roleDefinitionId])
+  @@index([organizationId, targetUnitTypeId])
+  @@index([organizationId, parallelGroupKey])
+  @@index([organizationId, deletedAt])
+  @@map("approval_stage_configs")
+}
+
+// Strongly-typed condition rows ensuring stages trigger only when predicate evaluates to true
+enum StageConditionField {
+  TOTAL_AMOUNT
+  REQUESTER_UNIT_TYPE
+  REQUESTER_ROLE
+  REQUEST_KIND
+  MIN_JOB_GRADE
+  IS_CAPITAL_EXPENDITURE
+  CUSTOM_ATTRIBUTE
+}
+
+enum StageConditionOperator {
+  EQUALS
+  NOT_EQUALS
+  GREATER_THAN
+  GREATER_THAN_OR_EQUAL
+  LESS_THAN
+  LESS_THAN_OR_EQUAL
+  IN_LIST
+  NOT_IN_LIST
+}
+
+model WorkflowStageCondition {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String                 @db.Uuid
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  stageConfigId          String                 @db.Uuid
+  stageConfig            ApprovalStageConfig    @relation(fields: [stageConfigId], references: [id], onDelete: Cascade)
+
+  field                  StageConditionField
+  operator               StageConditionOperator
+  valueString            String?                @db.VarChar(255)
+  valueNumber            Decimal?               @db.Decimal(14, 2)
+  valueBoolean           Boolean?
+  valueJson              Json?
+  logicalOperator        String                 @default("AND") @db.VarChar(8) // AND / OR
+
+  deletedAt              DateTime?              @db.Timestamptz(6)
+  createdAt              DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime               @updatedAt @db.Timestamptz(6)
+
+  @@index([organizationId, stageConfigId])
+  @@index([organizationId, deletedAt])
+  @@map("workflow_stage_conditions")
+}
+
+// Immutable Request instance locked to the workflow version it started on
+model ApprovalRequest {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String                 @db.Uuid
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  workflowId             String                 @db.Uuid
+  workflow               ApprovalWorkflow       @relation(fields: [workflowId], references: [id], onDelete: Restrict)
+  workflowVersion        Int                    @default(1)
+
+  requestKindId          String?                @db.Uuid
+  requestKind            ApprovalRequestKind?   @relation(fields: [requestKindId], references: [id], onDelete: SetNull)
+
+  // Immutable frozen snapshot of workflow definition, stages, conditions, and approver rules at submission time
+  workflowSnapshot       Json?
+
+  currentStageOrder      Int                    @default(1)
+  overallStatus          ApprovalStatus         @default(PENDING)
+
+  requestedByMembershipId String                @db.Uuid
+  requestedByMembership  OrganizationMembership @relation("ApprovalRequester", fields: [requestedByMembershipId], references: [id], onDelete: Restrict)
+
+  // Request Evaluation Attributes (monetary amounts, severity, grade for condition matching)
+  amount                 Decimal?               @db.Decimal(14, 2)
+  payloadMetadata        Json?
+
+  // Entity References: Exactly ONE must be populated (enforced via database CHECK)
+  workplanId             String?                @db.Uuid
+  workplan               Workplan?              @relation(fields: [workplanId], references: [id], onDelete: Cascade)
+
+  performanceAgreementId String?                @db.Uuid
+  performanceAgreement   PerformanceAgreement?  @relation(fields: [performanceAgreementId], references: [id], onDelete: Cascade)
+
+  performanceAppraisalId String?                @db.Uuid
+  performanceAppraisal   PerformanceAppraisal?  @relation(fields: [performanceAppraisalId], references: [id], onDelete: Cascade)
+
+  kpiPeriodicTargetId    String?                @db.Uuid
+  kpiPeriodicTarget      KpiPeriodicTarget?     @relation(fields: [kpiPeriodicTargetId], references: [id], onDelete: Cascade)
+
+  restructureProposalId  String?                @db.Uuid
+  restructureProposal    OrgRestructureProposal? @relation(fields: [restructureProposalId], references: [id], onDelete: Cascade)
+
+  restructureOrgUnitId   String?                @db.Uuid
+  restructureOrgUnit     OrgUnit?               @relation("OrgUnitRestructureApprovals", fields: [restructureOrgUnitId], references: [id], onDelete: Cascade)
+
+  evidenceAttachmentId   String?                @db.Uuid
+  evidenceAttachment     EvidenceAttachment?    @relation(fields: [evidenceAttachmentId], references: [id], onDelete: Cascade)
+
+  deletedAt              DateTime?              @db.Timestamptz(6)
+  submittedAt            DateTime               @default(now()) @db.Timestamptz(6)
+  completedAt            DateTime?              @db.Timestamptz(6)
+
+  actions                ApprovalAction[]
+  auditTrails            AuditTrail[]
+
+  @@index([organizationId, requestKindId, overallStatus])
+  @@index([organizationId, requestedByMembershipId])
+  @@index([workplanId])
+  @@index([performanceAgreementId])
+  @@index([performanceAppraisalId])
+  @@index([kpiPeriodicTargetId])
+  @@index([restructureProposalId])
+  @@index([restructureOrgUnitId])
+  @@index([evidenceAttachmentId])
+  @@index([organizationId, deletedAt])
+  @@map("approval_requests")
+}
+
+// Action log capturing decision, real actor, delegation replacement, and signature hash
+model ApprovalAction {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String                 @db.Uuid
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  requestId              String                 @db.Uuid
+  request                ApprovalRequest        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  stageConfigId          String?                @db.Uuid
+  stageConfig            ApprovalStageConfig?   @relation(fields: [stageConfigId], references: [id], onDelete: SetNull)
+
+  stageOrder             Int
+
+  // Real Actor (who physically executed the decision)
+  actorMembershipId      String                 @db.Uuid
+  actorMembership        OrganizationMembership @relation(fields: [actorMembershipId], references: [id], onDelete: Restrict)
+
+  // Substantive Approver on whose behalf the action was executed (if acting or delegated)
+  actingOnBehalfOfMembershipId String?          @db.Uuid
+  actingOnBehalfOfMembership OrganizationMembership? @relation("DelegatedApprovalSubstantive", fields: [actingOnBehalfOfMembershipId], references: [id], onDelete: SetNull)
+
+  // Active delegation or acting position links
+  delegationId           String?                @db.Uuid
+  delegation             UserDelegation?        @relation(fields: [delegationId], references: [id], onDelete: SetNull)
+
+  actingPositionAssignmentId String?            @db.Uuid
+  actingPositionAssignment PositionAssignment?  @relation(fields: [actingPositionAssignmentId], references: [id], onDelete: SetNull)
+
+  isDelegatedAction      Boolean                @default(false)
+  delegationReason       String?                @db.Text
+
+  decision               ApprovalActionDecision
+  remarks                String?                @db.Text
+  signatureHash          String?                @db.VarChar(128)
+  ipAddress              String?                @db.VarChar(45)
+
+  deletedAt              DateTime?              @db.Timestamptz(6)
+  actedAt                DateTime               @default(now()) @db.Timestamptz(6)
+
+  @@index([organizationId, requestId])
+  @@index([organizationId, actorMembershipId])
+  @@index([organizationId, actingOnBehalfOfMembershipId])
+  @@index([delegationId])
+  @@index([organizationId, deletedAt])
+  @@map("approval_actions")
+}
+
+enum AuditActionType {
+  RECORD_CREATED
+  RECORD_UPDATED
+  RECORD_DELETED
+  STATUS_TRANSITION
+  MUTUAL_SIGNATURE
+  APPROVAL_GRANTED
+  REVISION_ORDERED
+  EVIDENCE_AUDITED
+  SECURITY_OVERRIDE
+}
+
+model AuditTrail {
+  id                 String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String                 @db.Uuid
+  organization       Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  actorMembershipId  String?                @db.Uuid
+  actorMembership    OrganizationMembership? @relation(fields: [actorMembershipId], references: [id], onDelete: SetNull)
+  actorNameSnapshot  String?                @db.VarChar(200)
+  actorEmailSnapshot String?                @db.VarChar(255)
+
+  actionType         AuditActionType
+  entityName         String                 @db.VarChar(64)
+  entityId           String                 @db.Uuid
+  summary            String                 @db.VarChar(500)
+
+  previousState      Json?
+  newState           Json?
+  ipAddress          String?                @db.VarChar(45)
+  userAgent          String?                @db.Text
+
+  // Cryptographic immutability & hash chaining
+  prevHash           String?                @db.VarChar(64)
+  rowHash            String                 @db.VarChar(64)
+
+  approvalRequestId  String?                @db.Uuid
+  approvalRequest    ApprovalRequest?       @relation(fields: [approvalRequestId], references: [id], onDelete: SetNull)
+
+  recordedAt         DateTime               @default(now()) @db.Timestamptz(6)
+  deletedAt          DateTime?              @db.Timestamptz(6)
+
+  @@index([organizationId, entityName, entityId])
+  @@index([organizationId, recordedAt])
+  @@index([organizationId, rowHash])
+  @@index([actorMembershipId])
+  @@index([organizationId, deletedAt])
+  @@map("audit_trails")
+}
+
+enum StoryVerificationStatus {
+  DRAFT_UNVERIFIED
+  SUBMITTED_FOR_AUDIT
+  VERIFIED_BY_SUPERVISOR
+  AUDITED_BY_QA
+  REJECTED_INSUFFICIENT_PROOF
+}
+
+// "Most specific link wins" rule applied: at most ONE parent governance link allowed
+model StoryBankEntry {
+  id                         String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId             String                  @db.Uuid
+  organization               Organization            @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  fiscalYearId               String                  @db.Uuid
+  fiscalYear                 FiscalYear              @relation(fields: [fiscalYearId], references: [id], onDelete: Restrict)
+
+  orgUnitId                  String                  @db.Uuid
+  orgUnit                    OrgUnit                 @relation(fields: [orgUnitId], references: [id], onDelete: Restrict)
+
+  // Governance links: at most ONE is populated (enforced via database CHECK)
+  strategicObjectiveId       String?                 @db.Uuid
+  strategicObjective         StrategicObjective?     @relation(fields: [strategicObjectiveId], references: [id], onDelete: SetNull)
+
+  kpiId                      String?                 @db.Uuid
+  kpi                        KeyPerformanceIndicator? @relation(fields: [kpiId], references: [id], onDelete: SetNull)
+
+  workplanActivityId         String?                 @db.Uuid
+  workplanActivity           WorkplanActivity?       @relation(fields: [workplanActivityId], references: [id], onDelete: SetNull)
+
+  performanceAppraisalItemId String?                 @db.Uuid
+  performanceAppraisalItem   PerformanceAppraisalItem? @relation(fields: [performanceAppraisalItemId], references: [id], onDelete: SetNull)
+
+  headline                   String                  @db.VarChar(255)
+  narrative                  String                  @db.Text
+  beneficiaryStatement       String?                 @db.Text
+  quantitativeImpact         Json?
+  tags                       String[]
+
+  verificationStatus         StoryVerificationStatus @default(DRAFT_UNVERIFIED)
+  verifiedByAuditorMembershipId String?              @db.Uuid
+  verifiedByAuditorMembership OrganizationMembership? @relation("StoryAuditor", fields: [verifiedByAuditorMembershipId], references: [id], onDelete: SetNull)
+  verificationNotes          String?                 @db.Text
+  verifiedAt                 DateTime?               @db.Timestamptz(6)
+  certificateNumber          String?                 @unique @db.VarChar(64)
+
+  isPubliclyShareable        Boolean                 @default(false)
+  isFeatured                 Boolean                 @default(false)
+
+  deletedAt                  DateTime?               @db.Timestamptz(6)
+  createdAt                  DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt                  DateTime                @updatedAt @db.Timestamptz(6)
+
+  evidenceAttachments        EvidenceAttachment[]
+
+  @@index([organizationId, verificationStatus])
+  @@index([organizationId, orgUnitId])
+  @@index([organizationId, isFeatured])
+  @@index([organizationId, deletedAt])
+  @@index([strategicObjectiveId])
+  @@index([kpiId])
+  @@index([workplanActivityId])
+  @@index([performanceAppraisalItemId])
+  @@map("story_bank_entries")
+}
+
+enum EvidenceVerificationStatus {
+  PENDING_SUPERVISOR_REVIEW
+  SUPERVISOR_VERIFIED
+  QA_AUDITED_CERTIFIED
+  REVISION_REQUESTED
+}
+
+model EvidenceAttachment {
+  id                         String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId             String                     @db.Uuid
+  organization               Organization               @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+
+  // Direct Attachment to Performance Appraisal Item
+  performanceAppraisalItemId String?                    @db.Uuid
+  performanceAppraisalItem   PerformanceAppraisalItem?  @relation(fields: [performanceAppraisalItemId], references: [id], onDelete: SetNull)
+
+  // Linkages to Story Bank and Workplan Activity
+  storyBankEntryId           String?                    @db.Uuid
+  storyBankEntry             StoryBankEntry?            @relation(fields: [storyBankEntryId], references: [id], onDelete: SetNull)
+
+  workplanActivityId         String?                    @db.Uuid
+  workplanActivity           WorkplanActivity?          @relation(fields: [workplanActivityId], references: [id], onDelete: SetNull)
+
+  title                      String                     @default("Evidence Document") @db.VarChar(255)
+
+  // Tenant Lookup Table Category Reference (Replaced hardcoded enum)
+  categoryId                 String                     @db.Uuid
+  category                   EvidenceCategory           @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  categoryCode               String?                    @db.VarChar(64)
+
+  fileName                   String                     @db.VarChar(255)
+  storageKey                 String                     @db.VarChar(512)
+  fileUrl                    String?                    @db.Text
+  mimeType                   String                     @db.VarChar(100)
+  fileSizeBytes              BigInt
+  checksumSha256             String                     @db.VarChar(64)
+
+  verificationStatus         EvidenceVerificationStatus @default(PENDING_SUPERVISOR_REVIEW)
+  verifiedByMembershipId     String?                    @db.Uuid
+  verifiedByMembership       OrganizationMembership?    @relation("EvidenceVerifier", fields: [verifiedByMembershipId], references: [id], onDelete: SetNull)
+  certificateNumber          String?                    @db.VarChar(64)
+  verifiedAt                 DateTime?                  @db.Timestamptz(6)
+  verificationNotes          String?                    @db.Text
+
+  geotagLatitude             Decimal?                   @db.Decimal(10, 7)
+  geotagLongitude            Decimal?                   @db.Decimal(10, 7)
+  capturedAt                 DateTime?                  @db.Timestamptz(6)
+  metadata                   Json?
+
+  uploadedByMembershipId     String?                    @db.Uuid
+  uploadedByMembership       OrganizationMembership?    @relation("AttachmentUploader", fields: [uploadedByMembershipId], references: [id], onDelete: SetNull)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt                  DateTime                   @default(now()) @db.Timestamptz(6)
+
+  approvalRequests           ApprovalRequest[]
+
+  @@index([organizationId, performanceAppraisalItemId])
+  @@index([organizationId, storyBankEntryId])
+  @@index([organizationId, workplanActivityId])
+  @@index([organizationId, categoryId])
+  @@index([organizationId, verificationStatus])
+  @@index([organizationId, deletedAt])
+  @@map("evidence_attachments")
+}
+
+// ==============================================================================
+// 9. REUSABLE TEMPLATES, ONBOARDING ENGINE & PLATFORM SUPPORT ACCESS
+// ==============================================================================
+
+enum TemplateSector {
+  PUBLIC_SECTOR
+  NGO
+  PRIVATE
+}
+
+model TemplatePack {
+  id               String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code             String         @unique @db.VarChar(64)
+  name             String         @db.VarChar(255)
+  sector           TemplateSector @default(PUBLIC_SECTOR)
+  version          String         @default("1.0.0") @db.VarChar(32)
+  description      String?        @db.Text
+  planYearsDefault Int            @default(5)
+  packData         Json
+  isActive         Boolean        @default(true)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt        DateTime       @default(now()) @db.Timestamptz(6)
+  updatedAt        DateTime       @updatedAt @db.Timestamptz(6)
+
+  onboardings      OrganizationOnboarding[]
+
+  @@index([deletedAt])
+  @@map("template_packs")
+}
+
+model OrganizationOnboarding {
+  id                          String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId              String                  @unique @db.Uuid
+  organization                Organization            @relation("OrganizationOnboarding", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  templatePackId              String                  @db.Uuid
+  templatePack                TemplatePack            @relation(fields: [templatePackId], references: [id], onDelete: Restrict)
+
+  appliedAt                   DateTime                @default(now()) @db.Timestamptz(6)
+  appliedByMembershipId       String?                 @db.Uuid
+  appliedByMembership         OrganizationMembership? @relation(fields: [appliedByMembershipId], references: [id], onDelete: SetNull)
+
+  sourceParentOrganizationId  String?                 @db.Uuid
+  sourceParentOrganization    Organization?           @relation("ClonedFromParentOnboarding", fields: [sourceParentOrganizationId], references: [id], onDelete: SetNull)
+
+  overrides                   Json?
+  status                      String                  @default("COMPLETED") @db.VarChar(32)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt                   DateTime                @default(now()) @db.Timestamptz(6)
+  updatedAt                   DateTime                @updatedAt @db.Timestamptz(6)
+
+  @@index([organizationId, deletedAt])
+  @@map("organization_onboardings")
+}
+
+// Time-Boxed, Tenant-Approved Platform Support Access Grant
+model SupportAccessGrant {
+  id                     String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String                 @db.Uuid
+  organization           Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  supportIdentityId      String                 @db.Uuid
+  supportIdentity        Identity               @relation(fields: [supportIdentityId], references: [id], onDelete: Restrict)
+
+  requestedReason        String                 @db.Text
+  approvedByMembershipId String                 @db.Uuid
+  approvedByMembership   OrganizationMembership @relation(fields: [approvedByMembershipId], references: [id], onDelete: Restrict)
+
+  approvedAt             DateTime               @default(now()) @db.Timestamptz(6)
+  expiresAt              DateTime               @db.Timestamptz(6)
+  isRevoked              Boolean                @default(false)
+  revokedAt              DateTime?              @db.Timestamptz(6)
+  accessScope            String                 @default("DIAGNOSTIC_READ_ONLY") @db.VarChar(64)
+
+  deletedAt                  DateTime?                  @db.Timestamptz(6)
+  createdAt              DateTime               @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime               @updatedAt @db.Timestamptz(6)
+
+  @@index([organizationId, supportIdentityId, expiresAt])
+  @@index([organizationId, deletedAt])
+  @@map("support_access_grants")
+}
+
+// ==============================================================================
+// 11. INTERACTIVE ANALYTICS, BUSINESS INTELLIGENCE (BI) ENGINE & ROLLUP AGGREGATES
+// ==============================================================================
+
+enum WidgetChartType {
+  METRIC_CARD
+  BAR_CHART
+  STACKED_BAR
+  LINE_CHART
+  AREA_CHART
+  PIE_CHART
+  DONUT_CHART
+  RADAR_CHART
+  D3_HEATMAP
+  GAUGE_SPEEDOMETER
+  DATA_GRID_TABLE
+  SCATTER_PLOT
+  FUNNEL_CHART
+}
+
+enum MetricAggregationType {
+  SUM
+  AVG
+  COUNT
+  MIN
+  MAX
+  WEIGHTED_AVG
+  MEDIAN
+  PERCENTILE_90
+}
+
+enum DashboardVisibility {
+  PRIVATE_USER
+  UNIT_SHARED
+  ORGANIZATION_PUBLIC
+  GROUP_CONSOLIDATED
+}
+
+enum AnalyticsDomain {
+  EXECUTIVE_OVERVIEW
+  STRATEGIC_PLAN_KPI
+  DEPARTMENTAL_WORKPLAN
+  PERFORMANCE_AGREEMENT
+  ANNUAL_APPRAISAL
+  RECRUITMENT_TALENT
+  RISK_COMPLIANCE
+  EVIDENCE_STORY_BANK
+}
+
+// Dynamic Custom Dashboard Layouts
+model DashboardDefinition {
+  id                     String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId         String              @db.Uuid
+  organization           Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  code                   String              @db.VarChar(64)
+  title                  String              @db.VarChar(255)
+  description            String?             @db.Text
+  domain                 AnalyticsDomain     @default(EXECUTIVE_OVERVIEW)
+  visibility             DashboardVisibility @default(ORGANIZATION_PUBLIC)
+  isDefault              Boolean             @default(false)
+  isSystemStandard       Boolean             @default(false)
+
+  // Layout & Responsive Breakpoints
+  layoutConfig           Json?               // [{i: "widget-1", x: 0, y: 0, w: 6, h: 4}]
+  defaultFilters         Json?               // {fiscalYear: "FY-2025/2026", unitPath: "top.*"}
+  refreshIntervalSeconds Int?                @default(300)
+
+  authorMembershipId     String?             @db.Uuid
+  authorMembership       OrganizationMembership? @relation("DashboardAuthor", fields: [authorMembershipId], references: [id], onDelete: SetNull)
+
+  deletedAt              DateTime?           @db.Timestamptz(6)
+  createdAt              DateTime            @default(now()) @db.Timestamptz(6)
+  updatedAt              DateTime            @updatedAt @db.Timestamptz(6)
+
+  widgets                DashboardWidget[]
+  savedViews             AnalyticsSavedView[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, domain])
+  @@index([organizationId, visibility])
+  @@index([organizationId, authorMembershipId])
+  @@index([organizationId, deletedAt])
+  @@map("dashboard_definitions")
+}
+
+// Configurable Dashboard Widget Parameters
+model DashboardWidget {
+  id                 String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId     String                @db.Uuid
+  organization       Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  dashboardId        String                @db.Uuid
+  dashboard          DashboardDefinition   @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+
+  widgetCode         String                @db.VarChar(64)
+  title              String                @db.VarChar(255)
+  subtitle           String?               @db.VarChar(255)
+  chartType          WidgetChartType       @default(BAR_CHART)
+  aggregationType    MetricAggregationType @default(AVG)
+
+  // Metrics, Dimensions & Calculations
+  targetMetricField  String                @db.VarChar(128) // e.g. "compositeWeightedScore", "achievementPercent"
+  dimensionField     String?               @db.VarChar(128) // e.g. "orgUnit.level", "gradingBand.gradeCode"
+  filterCriteria     Json?                 // Drilldown criteria and threshold bands
+  colorPalette       String?               @db.VarChar(64)
+
+  // Grid Coordinate Placement
+  gridPosX           Int                   @default(0)
+  gridPosY           Int                   @default(0)
+  gridWidth          Int                   @default(6)
+  gridHeight         Int                   @default(4)
+  minWidth           Int?                  @default(3)
+  minHeight          Int?                  @default(2)
+
+  dataSourceQuery    String?               @db.VarChar(128) // e.g. "rollup:department_execution"
+  options            Json?                 // Tooltips, axis formatting, legends
+  sortOrder          Int                   @default(1)
+
+  deletedAt          DateTime?             @db.Timestamptz(6)
+  createdAt          DateTime              @default(now()) @db.Timestamptz(6)
+  updatedAt          DateTime              @updatedAt @db.Timestamptz(6)
+
+  @@unique([dashboardId, widgetCode])
+  @@index([organizationId, dashboardId])
+  @@index([organizationId, chartType])
+  @@index([organizationId, deletedAt])
+  @@map("dashboard_widgets")
+}
+
+// Saved Views & Filter Presets for Instant Slice-and-Dice Drill-Downs
+model AnalyticsSavedView {
+  id                  String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId      String               @db.Uuid
+  organization        Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  dashboardId         String?              @db.Uuid
+  dashboard           DashboardDefinition? @relation(fields: [dashboardId], references: [id], onDelete: SetNull)
+
+  viewName            String               @db.VarChar(150)
+  viewCode            String               @db.VarChar(64)
+  domain              AnalyticsDomain      @default(EXECUTIVE_OVERVIEW)
+  isShared            Boolean              @default(false)
+  isFavorite          Boolean              @default(false)
+
+  authorMembershipId  String?              @db.Uuid
+  authorMembership    OrganizationMembership? @relation("SavedViewAuthor", fields: [authorMembershipId], references: [id], onDelete: SetNull)
+
+  // Filter Preset Criteria
+  fiscalYearCode      String?              @db.VarChar(32)
+  orgUnitPathPrefix   String?              @db.VarChar(255) // ltree path filter: "top.dir_finance.*"
+  selectedRoles       String[]
+  filterPayload       Json                 // Full serializable filter facet tree
+  columnPreferences   Json?                // Table columns, sort keys, visibility toggles
+
+  deletedAt           DateTime?            @db.Timestamptz(6)
+  createdAt           DateTime             @default(now()) @db.Timestamptz(6)
+  updatedAt           DateTime             @updatedAt @db.Timestamptz(6)
+
+  @@unique([organizationId, viewCode])
+  @@index([organizationId, domain])
+  @@index([organizationId, authorMembershipId])
+  @@index([organizationId, deletedAt])
+  @@map("analytics_saved_views")
+}
+
+// Analytical Summary Cache / Rollup Table: Departmental Execution Burn-Rate
+model DepartmentExecutionRollup {
+  id                          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId              String          @db.Uuid
+  organization                Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  fiscalYearId                String          @db.Uuid
+  fiscalYear                  FiscalYear      @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+
+  orgUnitId                   String          @db.Uuid
+  orgUnit                     OrgUnit         @relation(fields: [orgUnitId], references: [id], onDelete: Cascade)
+
+  periodKey                   String          @db.VarChar(32) // "Q1", "Q2", "Q3", "Q4", "ANNUAL"
+
+  // Activity & Milestone Aggregates
+  totalMilestonesScheduled    Int             @default(0)
+  milestonesCompletedOnTime   Int             @default(0)
+  milestonesDelayed           Int             @default(0)
+  burnRateExecutionPercent    Decimal         @default(0.00) @db.Decimal(5, 2)
+
+  // Financial & Budgetary Metrics
+  budgetAllocated             Decimal         @default(0.00) @db.Decimal(14, 2)
+  budgetExpended              Decimal         @default(0.00) @db.Decimal(14, 2)
+  budgetVariancePercent       Decimal?        @db.Decimal(6, 2)
+
+  // Strategic KPI & Appraisal Metrics
+  averageKpiAchievementRate   Decimal?        @db.Decimal(7, 2)
+  averageAppraisalScore       Decimal?        @db.Decimal(5, 2)
+  evidenceAttachedCount       Int             @default(0)
+  verifiedEvidenceCount       Int             @default(0)
+
+  asOfDate                    DateTime        @db.Date
+  snapshotHash                String?         @db.VarChar(64)
+
+  deletedAt                   DateTime?       @db.Timestamptz(6)
+  refreshedAt                 DateTime        @default(now()) @db.Timestamptz(6)
+
+  @@unique([organizationId, fiscalYearId, orgUnitId, periodKey])
+  @@index([organizationId, fiscalYearId, periodKey])
+  @@index([organizationId, orgUnitId])
+  @@index([organizationId, deletedAt])
+  @@map("department_execution_rollups")
+}
+
+// Analytical Summary Cache / Rollup Table: Subsidiary Scorecard Aggregates
+model SubsidiaryScorecardRollup {
+  id                              String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId                  String            @db.Uuid
+  organization                    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  groupId                         String            @db.Uuid
+  group                           OrganizationGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  fiscalYearId                    String            @db.Uuid
+  fiscalYear                      FiscalYear        @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+
+  calendarQuarter                 String            @db.VarChar(16) // "2025-Q3", "2025-Q4"
+
+  totalStrategicObjectivesCount   Int               @default(0)
+  alignedObjectivesCount          Int               @default(0)
+  weightedGroupContributionScore  Decimal?          @db.Decimal(5, 2)
+  consolidatedKpiIndex            Decimal?          @db.Decimal(7, 2)
+
+  contractsExecutedCount          Int               @default(0)
+  appraisalsClosedCount           Int               @default(0)
+
+  reportingCurrency               String            @default("USD") @db.VarChar(8)
+  currencyConversionRate          Decimal?          @default(1.000000) @db.Decimal(16, 6)
+
+  asOfDate                        DateTime          @db.Date
+  deletedAt                       DateTime?         @db.Timestamptz(6)
+  refreshedAt                     DateTime          @default(now()) @db.Timestamptz(6)
+
+  @@unique([groupId, organizationId, fiscalYearId, calendarQuarter])
+  @@index([groupId, calendarQuarter])
+  @@index([organizationId, fiscalYearId])
+  @@index([organizationId, deletedAt])
+  @@map("subsidiary_scorecard_rollups")
+}
+
+// Analytical Summary Cache / Rollup Table: Appraisal Distribution Curves by Grading Band
+model AppraisalDistributionRollup {
+  id                         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId             String        @db.Uuid
+  organization               Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  fiscalYearId               String        @db.Uuid
+  fiscalYear                 FiscalYear    @relation(fields: [fiscalYearId], references: [id], onDelete: Cascade)
+
+  orgUnitId                  String?       @db.Uuid // NULL denotes entire Organization distribution
+  orgUnit                    OrgUnit?      @relation(fields: [orgUnitId], references: [id], onDelete: SetNull)
+
+  gradingBandId              String        @db.Uuid
+  gradingBand                GradingBand   @relation(fields: [gradingBandId], references: [id], onDelete: Cascade)
+
+  periodKey                  String        @default("ANNUAL") @db.VarChar(32)
+  cadre                      String?       @db.VarChar(64)
+
+  appraisalCount             Int           @default(0)
+  percentageOfPopulation     Decimal       @default(0.00) @db.Decimal(5, 2)
+  targetQuotaPercent         Decimal?      @db.Decimal(5, 2) // e.g. 10.00%
+  quotaDeviationPercent      Decimal?      @db.Decimal(5, 2)
+
+  postCalibrationCount       Int?          @default(0)
+  postCalibrationPercent     Decimal?      @db.Decimal(5, 2)
+
+  asOfDate                   DateTime      @db.Date
+  deletedAt                  DateTime?     @db.Timestamptz(6)
+  refreshedAt                DateTime      @default(now()) @db.Timestamptz(6)
+
+  @@unique([organizationId, fiscalYearId, orgUnitId, gradingBandId, periodKey])
+  @@index([organizationId, fiscalYearId, periodKey])
+  @@index([organizationId, gradingBandId])
+  @@index([organizationId, deletedAt])
+  @@map("appraisal_distribution_rollups")
+}
+
